@@ -1,0 +1,260 @@
+# Spegel Configuration
+# Reflect the web through AI - see content from every angle
+
+[settings]
+default_view = "terminal"     # Which view to show first
+max_history = 50             # URL history limit  
+stream_delay = 0.01          # Streaming delay for AI responses (seconds)
+app_title = "Spegel"         # Application title
+
+[ui]
+show_icons = true            # Show emoji icons in tabs
+compact_mode = false         # Smaller UI elements
+
+# View definitions - order determines tab sequence and hotkey numbers
+[[views]]
+id = "raw"
+name = "Raw View"
+hotkey = "1"
+order = 1
+enabled = true
+auto_load = true             # Raw view always auto-loads
+description = "Clean HTML rendering (no LLM)"
+icon = "📄"
+prompt = ""  # Empty = no LLM processing
+
+[[views]]
+id = "terminal"
+name = "Terminal"
+hotkey = "2"
+order = 2
+enabled = true
+auto_load = true             # Terminal view auto-loads (user's preferred default)
+description = "Terminal-optimized markdown for efficient browsing"
+icon = "💻"
+prompt = """Transform this webpage into the perfect terminal browsing experience! 
+**OUTPUT FORMAT: Clean, compact markdown optimized for small terminal windows**
+
+**TERMINAL OPTIMIZATION RULES:**
+- **Width**: Keep lines under 80 characters for narrow terminals
+- **Hierarchy**: Use clear heading structure (##, ###) for easy scanning
+- **Density**: Pack maximum information in minimum space
+- **Navigation**: Make ALL important links clickable [text](url)
+- **Readability**: Use bullet points, numbered lists, and tables for structure
+
+**CONTENT PRIORITIES:**
+1. **Essential Info First** - Most important content at the top
+2. **Scannable Structure** - Headers, bullets, short paragraphs
+3. **Action-Oriented** - What can the user DO here? Make it clickable
+4. **Remove Fluff** - Cut marketing speak, keep substance
+5. **Preserve Links** - Every useful link should be clickable
+
+**FORMAT STRUCTURE:**
+# [Page Title](main-url)
+
+## 📋 Quick Summary
+(2-3 lines of what this page is about)
+
+## 🔗 Key Actions
+- [Primary action](url) - Brief description
+- [Secondary action](url) - Brief description
+
+## 📊 Main Content
+(Organized content with headers, bullets, tables as needed)
+
+## 🔍 More Links
+- [Related link](url)
+- [Another resource](url)
+
+**TERMINAL-FRIENDLY FEATURES:**
+- Use `code blocks` for technical terms
+- Create tables for structured data
+- Use **bold** for emphasis, *italics* sparingly
+- Keep paragraphs short (2-3 sentences max)
+- Use horizontal rules (---) to separate sections
+- Avoid extra linebreaks, they take a lot of vertical space.
+- No links in headers, the markdown renderer can't support it.
+- Do not assume the width of the screen, do not add linebreaks in sentences.
+Make this webpage PERFECT for someone browsing in a small terminal window!"""
+
+[[views]]
+id = "actions"
+name = "Actions"
+hotkey = "3"
+order = 3
+enabled = true
+auto_load = false            # Load on-demand only
+description = "Extract all possible user actions as clickable links"
+icon = "⚡"
+prompt = """Extract every possible action a user can take on this webpage.
+
+**OUTPUT FORMAT: Use markdown with clickable links [text](url)**
+
+**FIND ALL ACTIONS:**
+
+**Navigation & Links:**
+- Main navigation menu items - format as: [Menu Item](url)
+- Sidebar links and secondary navigation
+- Footer links that lead to useful pages
+- Breadcrumb navigation links
+
+**Interactive Elements:**
+- Buttons and calls-to-action - format as: [Button Text](url)
+- Form submission endpoints (if visible)
+- Download links - format as: [Download: filename](url)
+- Social media links - format as: [Platform](url)
+
+**Content Actions:**
+- Article/post links - format as: [Article Title](url)
+- Comment sections or discussion links
+- Share buttons and social actions
+- Print, save, bookmark options
+
+**User Account Actions:**
+- Login/signup links - format as: [Login](url) or [Sign Up](url)
+- Profile, settings, dashboard links
+- Logout or account management
+
+**E-commerce Actions:**
+- Product links - format as: [Product Name](url)
+- Add to cart, buy now, checkout buttons
+- Wishlist, compare, review actions
+
+**Search & Filter:**
+- Search functionality
+- Category filters and sorting options
+- Advanced search or filter pages
+
+**ORGANIZATION:**
+Use clear categories with headers:
+## 🔗 Primary Actions
+## 📱 Navigation
+## 🛒 Shopping Actions
+## 👤 Account Actions
+## 🔍 Search & Discovery
+
+Make every actionable item a clickable link so users can navigate directly."""
+
+[[views]]
+id = "summary"
+name = "Summary"
+hotkey = "4"
+order = 4
+enabled = true
+auto_load = false            # Load on-demand only
+description = "AI-powered content summary with navigable links"
+icon = "📋"
+prompt = """Create a comprehensive but concise summary of this webpage content.
+
+**OUTPUT FORMAT: Use markdown with clickable links [text](url)**
+
+**SUMMARY STRUCTURE:**
+
+## 📖 Main Topic
+(1-2 sentences explaining what this page is about)
+
+## 🎯 Key Points
+- **Point 1**: Brief explanation with [relevant link](url) if applicable
+- **Point 2**: Another key insight or finding
+- **Point 3**: Important detail or conclusion
+
+## 🔗 Important Links
+- [Primary resource](url) - Brief description
+- [Secondary resource](url) - What this leads to
+- [Related content](url) - Why this matters
+
+## 💡 Takeaways
+(2-3 bullet points of the most important information)
+
+**GUIDELINES:**
+- Keep it concise but comprehensive
+- Focus on actionable information
+- Include relevant statistics, dates, or key facts
+- Make all referenced content clickable
+- Highlight what makes this content valuable or unique
+- If it's a news article, include who, what, when, where, why
+- If it's a product page, include key features and benefits
+- If it's documentation, include main concepts and next steps
+
+Keep it brief but comprehensive with clear, navigable formatting."""
+
+[[views]]
+id = "contacts"
+name = "Contacts"
+hotkey = "5"
+order = 5
+enabled = true
+auto_load = false            # Load on-demand only
+description = "Extract contact information as clickable links"
+icon = "📞"
+prompt = """Extract all contact information from this webpage content.
+
+**OUTPUT FORMAT: Use markdown with clickable links [text](url) or [text](mailto:email)**
+
+Look for:
+
+**Email Addresses:**
+- Any email addresses - format as: [name@domain.com](mailto:name@domain.com)
+- Contact forms or email links
+
+**Phone Numbers:**
+- Phone numbers in any format (xxx-xxx-xxxx, +1 xxx xxx xxxx, etc.)
+- Toll-free numbers, international numbers
+
+**Physical Addresses:**
+- Street addresses, office locations
+- Mailing addresses, headquarters
+
+**Social Media & Online:**
+- Social media profiles - format as: [Twitter](https://twitter.com/username)
+- Website contact pages - format as: [Contact page](contact)
+- Support links
+
+**People & Roles:**
+- Contact person names and their roles - format as: [username](user?id=username)
+- Department-specific contacts
+
+Use markdown formatting:
+- **Bold** for categories
+- `code` for raw contact details
+- [Clickable links](url) for all actionable contacts
+- Bullet points for organization
+
+Make all contact information clickable where possible. If no contact info is found, say "No contact information detected on this page"."""
+
+[[views]]
+id = "eli5"
+name = "ELI5"
+hotkey = "6"
+order = 6
+enabled = true
+auto_load = false            # Load on-demand only
+description = "Explain content in simple, kid-friendly terms"
+icon = "🎉"
+prompt = """Explain this webpage content like I'm 5 years old! 
+
+**OUTPUT FORMAT: Use simple markdown with fun emojis and easy links [text](url)**
+
+Make it super simple and fun:
+- Use **really simple words** that a 5-year-old would understand
+- Add **fun emojis** 🎉 to make it exciting
+- Explain **why things are cool or important**
+- Use comparisons to things kids know (like toys, games, animals)
+- Make any links clickable with simple descriptions: [Cool thing to see](url)
+
+Structure it like:
+## 🌟 What is this about?
+(Simple explanation in kid-friendly language)
+
+## 🤔 Why is this cool?
+(Why someone should care, using simple examples)
+
+## 🎮 What can you do here?
+(Actions/links in simple terms)
+
+## 🧠 What did you learn?
+(Key takeaways in simple language)
+
+Use lots of emojis, simple sentences, and make everything sound exciting and fun! If it's technical, compare it to things kids understand like building blocks, toy cars, or video games.
+
+Remember: NO big words, NO complex concepts, just fun and simple explanations!""" 

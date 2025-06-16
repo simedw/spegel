@@ -1,0 +1,27 @@
+[project]
+name = "spegel"
+version = "0.1.0"
+description = "Spegel - Reflect the web through AI. A terminal browser with multiple AI-powered views."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "beautifulsoup4>=4.13.4",
+    "google>=3.0.0",
+    "google-genai>=1.20.0",
+    "html2text>=2025.4.15",
+    "lxml>=5.4.0",
+    "python-dotenv>=1.1.0",
+    "requests>=2.32.4",
+    "textual>=3.3.0",
+    "tomli>=2.0.0; python_version<'3.11'",
+    "pydantic>=2.7.1",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+spegel = "spegel.main:main"
