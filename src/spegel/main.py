@@ -28,7 +28,7 @@ from textual.widgets import (
 )
 from textual.binding import Binding
 
-from .web import fetch_url as fetch_url_blocking, extract_clean_text, html_to_markdown
+from .web import fetch_url as fetch_url_blocking, html_to_markdown
 from .views import stream_view
 
 # Load environment variables
@@ -68,6 +68,168 @@ class PromptEditor(TextArea):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+
+class LinkManager:
+    """Manages link extraction, navigation, and highlighting."""
+    
+    def __init__(self, app):
+        self.app = app
+        self.current_links: List[tuple] = []  # List of (link_text, link_url, start_pos, end_pos) tuples
+        self.current_link_index: int = -1  # Currently selected link index
+    
+    def extract_links_from_markdown(self, content: str) -> List[tuple]:
+        """Extract all links from markdown content with position tracking."""
+        import re
+        # Regex to match markdown links: [text](url) - including angle brackets from html2text
+        link_pattern = r"\[([^\]]+)\]\(([^)]+)\)"
+
+        # Find all matches with their positions
+        clean_links = []
+        for match in re.finditer(link_pattern, content):
+            text = match.group(1).strip()
+            url = match.group(2).strip()
+            start_pos = match.start()
+            end_pos = match.end()
+
+            # Remove angle brackets that html2text adds
+            if url.startswith("<") and url.endswith(">"):
+                url = url[1:-1]
+
+            # Skip empty URLs or URLs that are just fragments
+            if not url or url.startswith("#"):
+                continue
+
+            # Skip voting links (but keep other UI links like comments, user profiles, etc.)
+            if "vote?" in url:
+                continue
+
+            # Skip "from?site=" links (these are just site indicators)
+            if url.startswith("from?site="):
+                continue
+
+            # Store link with position info
+            clean_links.append((text, url, start_pos, end_pos))
+
+        return clean_links
+    
+    def update_links(self, content: str, view_id: str) -> None:
+        """Update current links if viewing the specified view."""
+        links = self.extract_links_from_markdown(content)
+        if self.app.current_view == view_id:
+            self.current_links = links
+            self.current_link_index = -1  # Reset selection
+    
+    def navigate_next_link(self) -> None:
+        """Navigate to the next link."""
+        if not self.current_links:
+            return
+        self.current_link_index = (self.current_link_index + 1) % len(self.current_links)
+        self._update_current_view_with_highlight()
+
+    def navigate_prev_link(self) -> None:
+        """Navigate to the previous link."""
+        if not self.current_links:
+            return
+        self.current_link_index = (self.current_link_index - 1) % len(self.current_links)
+        self._update_current_view_with_highlight()
+
+    async def open_current_link(self) -> None:
+        """Open the currently selected link."""
+        if self.current_link_index < 0 or self.current_link_index >= len(self.current_links):
+            self.app.notify("No link selected", severity="warning")
+            return
+
+        link_text, link_url, _, _ = self.current_links[self.current_link_index]
+        link_url = self.app._resolve_url(link_url)
+        
+        self.app.notify(f"Opening: {self._escape_markup(link_text)}")
+        await self.app.fetch_and_display_url(link_url)
+    
+    def highlight_current_link(self, content: str) -> str:
+        """Add highlighting to the currently selected link using position-based replacement."""
+        if self.current_link_index < 0 or self.current_link_index >= len(self.current_links):
+            return content
+
+        # Get the current link with position
+        link_text, link_url, start_pos, end_pos = self.current_links[self.current_link_index]
+
+        # Create highlighted version
+        highlighted_link = f"**→ [{link_text}]({link_url}) ←**"
+
+        # Replace the content at the specific position
+        # Split content into: before_link + highlighted_link + after_link
+        before = content[:start_pos]
+        after = content[end_pos:]
+
+        return before + highlighted_link + after
+    
+    def _update_current_view_with_highlight(self) -> None:
+        """Update the current view content with link highlighting."""
+        if self.app.current_view not in self.app.original_content:
+            return
+
+        original = self.app.original_content[self.app.current_view]
+        highlighted = self.highlight_current_link(original)
+
+        try:
+            content_widget = self.app.query_one(f"#content-{self.app.current_view}", HTMLContent)
+            content_widget.update(highlighted)
+        except Exception:
+            pass
+    
+    def _escape_markup(self, text: str) -> str:
+        """Escape markup characters for safe display in notifications."""
+        return text.replace("[", "\\[").replace("]", "\\]").replace("!", "\\!")
+
+
+class ScrollManager:
+    """Manages scroll position preservation during content updates."""
+    
+    def __init__(self, app):
+        self.app = app
+    
+    def update_content_preserve_scroll(self, content_widget, new_content: str) -> None:
+        """Update content while preserving scroll position during streaming."""
+        try:
+            scroll_state = self._capture_scroll_state(content_widget)
+            content_widget.update(new_content)
+            self._restore_scroll_if_needed(content_widget, scroll_state)
+        except Exception:
+            # Fallback to regular update if scroll preservation fails
+            content_widget.update(new_content)
+    
+    def _capture_scroll_state(self, content_widget) -> dict:
+        """Capture current scroll state for later restoration."""
+        scroll_y = content_widget.scroll_y
+        max_scroll_y = content_widget.max_scroll_y
+        
+        # Check if user is at the bottom (within a small threshold)
+        # If they are, we'll allow auto-scroll to continue
+        is_at_bottom = (max_scroll_y == 0) or (scroll_y >= max_scroll_y - 2)
+        
+        return {
+            "scroll_y": scroll_y,
+            "is_at_bottom": is_at_bottom
+        }
+    
+    def _restore_scroll_if_needed(self, content_widget, scroll_state: dict) -> None:
+        """Restore scroll position if user was not at bottom."""
+        if not scroll_state["is_at_bottom"]:
+            # Small delay to allow content to render
+            self.app.call_after_refresh(
+                lambda: self._restore_scroll_position(content_widget, scroll_state["scroll_y"])
+            )
+    
+    def _restore_scroll_position(self, content_widget, target_scroll_y: int) -> None:
+        """Restore scroll position after content update."""
+        try:
+            # Ensure we don't scroll beyond the new content bounds
+            max_scroll = content_widget.max_scroll_y
+            if max_scroll > 0:
+                content_widget.scroll_y = min(target_scroll_y, max_scroll)
+        except Exception:
+            pass  # Ignore if restoration fails
 
 
 class Spegel(App):
@@ -144,8 +306,6 @@ class Spegel(App):
         self.prompt_editor_visible = False
         self.views_loaded: set = set()  # Track which views have been processed
         self.views_loading: set = set()  # Track which views are currently loading
-        self.current_links: List[tuple] = []  # List of (link_text, link_url) tuples
-        self.current_link_index: int = -1  # Currently selected link index
         self.original_content: Dict[
             str, str
         ] = {}  # Store original content for each view
@@ -153,6 +313,10 @@ class Spegel(App):
 
         # Initialize LLM client via abstraction layer
         self.llm_client, self.llm_available = get_default_client()
+        
+        # Initialize managers
+        self.scroll_manager = ScrollManager(self)
+        self.link_manager = LinkManager(self)
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -290,38 +454,6 @@ class Spegel(App):
         except Exception:
             pass  # Ignore if widget not found
 
-    def _update_content_preserve_scroll(self, content_widget, new_content: str) -> None:
-        """Update content while preserving scroll position during streaming."""
-        try:
-            # Get current scroll position
-            scroll_y = content_widget.scroll_y
-            max_scroll_y = content_widget.max_scroll_y
-            
-            # Check if user is at the bottom (within a small threshold)
-            # If they are, we'll allow auto-scroll to continue
-            is_at_bottom = (max_scroll_y == 0) or (scroll_y >= max_scroll_y - 2)
-            
-            # Update the content
-            content_widget.update(new_content)
-            
-            # If user was not at the bottom, restore their scroll position
-            if not is_at_bottom:
-                # Small delay to allow content to render
-                self.call_after_refresh(lambda: self._restore_scroll_position(content_widget, scroll_y))
-                
-        except Exception:
-            # Fallback to regular update if scroll preservation fails
-            content_widget.update(new_content)
-
-    def _restore_scroll_position(self, content_widget, target_scroll_y: int) -> None:
-        """Restore scroll position after content update."""
-        try:
-            # Ensure we don't scroll beyond the new content bounds
-            max_scroll = content_widget.max_scroll_y
-            if max_scroll > 0:
-                content_widget.scroll_y = min(target_scroll_y, max_scroll)
-        except Exception:
-            pass  # Ignore if restoration fails
 
     @on(Input.Submitted, "#url-input")
     async def handle_url_submission(self, event: Input.Submitted) -> None:
@@ -354,7 +486,7 @@ class Spegel(App):
             and not self.url_input_visible
             and not self.prompt_editor_visible
         ):
-            if self.current_links:
+            if self.link_manager.current_links:
                 self.action_next_link()
                 event.prevent_default()
                 return
@@ -364,7 +496,7 @@ class Spegel(App):
             and not self.url_input_visible
             and not self.prompt_editor_visible
         ):
-            if self.current_links:
+            if self.link_manager.current_links:
                 self.action_prev_link()
                 event.prevent_default()
                 return
@@ -376,9 +508,9 @@ class Spegel(App):
             and not self.prompt_editor_visible
         ):
             if (
-                self.current_links
-                and self.current_link_index >= 0
-                and self.current_link_index < len(self.current_links)
+                self.link_manager.current_links
+                and self.link_manager.current_link_index >= 0
+                and self.link_manager.current_link_index < len(self.link_manager.current_links)
             ):
                 await self.action_open_link()
                 event.prevent_default()
@@ -444,20 +576,19 @@ class Spegel(App):
             # Update link selection for this view
             if self.current_view in self.original_content:
                 # Re-extract links with position information from stored content
-                self.current_links = self._extract_links_from_markdown(
-                    self.original_content[self.current_view]
+                self.link_manager.update_links(
+                    self.original_content[self.current_view], self.current_view
                 )
-                self.current_link_index = -1  # Reset selection
                 # Show brief notification about available links in this view
-                if self.current_links:
+                if self.link_manager.current_links:
                     self.notify(
-                        f"{len(self.current_links)} links available in {self.views[self.current_view].name}",
+                        f"{len(self.link_manager.current_links)} links available in {self.views[self.current_view].name}",
                         timeout=2,
                     )
             else:
                 # No content yet, clear links
-                self.current_links = []
-                self.current_link_index = -1
+                self.link_manager.current_links = []
+                self.link_manager.current_link_index = -1
         else:
             self.notify(f"Unknown tab: {tab_name} (available: {list(self.views.keys())})", timeout=3)
 
@@ -611,20 +742,15 @@ class Spegel(App):
 
             # Store original content and extract links
             self.original_content[view_id] = formatted_content
-            links = self._extract_links_from_markdown(formatted_content)
-
-            # Only update current links if we're currently viewing this tab
-            if self.current_view == view_id:
-                self.current_links = links
-                self.current_link_index = -1  # Reset link selection
+            self.link_manager.update_links(formatted_content, view_id)
 
             content_widget.update(formatted_content)
 
             # Show link count only if we're currently viewing this tab
             if self.current_view == view_id:
-                if self.current_links:
+                if self.link_manager.current_links:
                     self.notify(
-                        f"Found {len(self.current_links)} links. Use Tab/Shift+Tab to navigate, Enter to open.",
+                        f"Found {len(self.link_manager.current_links)} links. Use Tab/Shift+Tab to navigate, Enter to open.",
                         timeout=5,
                     )
                 else:
@@ -644,219 +770,54 @@ class Spegel(App):
                 running_content += chunk
                 
                 # Preserve scroll position during streaming updates
-                self._update_content_preserve_scroll(content_widget, running_content)
+                self.scroll_manager.update_content_preserve_scroll(content_widget, running_content)
 
             self.original_content[view_id] = running_content
-            links = self._extract_links_from_markdown(running_content)
+            self.link_manager.update_links(running_content, view_id)
 
             if self.current_view == view_id:
-                self.current_links = links
-                self.current_link_index = -1
-                if links:
+                if self.link_manager.current_links:
                     self.notify(
-                        f"Found {len(links)} links in {self.views[view_id].name}. Use Tab/Shift+Tab to navigate.",
+                        f"Found {len(self.link_manager.current_links)} links in {self.views[view_id].name}. Use Tab/Shift+Tab to navigate.",
                         timeout=3,
                     )
 
-    def _extract_table_content(self, table) -> List[str]:
-        """Extract content from HTML table (useful for sites like HN)."""
-        content = []
 
-        for row in table.find_all("tr"):
-            cells = row.find_all(["td", "th"])
-            if cells:
-                row_content = []
-                for cell in cells:
-                    # Extract links with their text
-                    links = cell.find_all("a")
-                    if links:
-                        for link in links:
-                            text = link.get_text().strip()
-                            href = link.get("href", "")
-                            if text and len(text) > 3:
-                                if href and not href.startswith("#"):
-                                    row_content.append(f"[{text}]({href})")
-                                else:
-                                    row_content.append(text)
-                    else:
-                        # Regular cell text
-                        cell_text = cell.get_text().strip()
-                        if cell_text and len(cell_text) > 2:
-                            row_content.append(cell_text)
 
-                if row_content:
-                    # Join cell content with separators
-                    combined = " | ".join(row_content)
-                    if len(combined) > 10:
-                        content.append(combined)
-
-        return content
-
-    def _extract_text_content(self, element) -> List[str]:
-        """Extract text content from element (legacy method - now simplified)."""
-        return [element.get_text().strip()] if element else []
-
-    def _wrap_text(self, text: str, width: int) -> List[str]:
-        """Wrap text to specified width."""
-        words = text.split()
-        lines = []
-        current_line = []
-        current_length = 0
-
-        for word in words:
-            if current_length + len(word) + len(current_line) <= width:
-                current_line.append(word)
-                current_length += len(word)
-            else:
-                if current_line:
-                    lines.append(" ".join(current_line))
-                current_line = [word]
-                current_length = len(word)
-
-        if current_line:
-            lines.append(" ".join(current_line))
-
-        return lines
-
-    def _extract_links_from_markdown(self, content: str) -> List[tuple]:
-        """Extract all links from markdown content with position tracking."""
-        # Regex to match markdown links: [text](url) - including angle brackets from html2text
-        link_pattern = r"\[([^\]]+)\]\(([^)]+)\)"
-
-        # Find all matches with their positions
-        clean_links = []
-        for match in re.finditer(link_pattern, content):
-            text = match.group(1).strip()
-            url = match.group(2).strip()
-            start_pos = match.start()
-            end_pos = match.end()
-
-            # Remove angle brackets that html2text adds
-            if url.startswith("<") and url.endswith(">"):
-                url = url[1:-1]
-
-            # Skip empty URLs or URLs that are just fragments
-            if not url or url.startswith("#"):
-                continue
-
-            # Skip voting links (but keep other UI links like comments, user profiles, etc.)
-            if "vote?" in url:
-                continue
-
-            # Skip "from?site=" links (these are just site indicators)
-            if url.startswith("from?site="):
-                continue
-
-            # Store link with position info
-            clean_links.append((text, url, start_pos, end_pos))
-
-        return clean_links
-
-    def _escape_markup(self, text: str) -> str:
-        """Escape markup characters for safe display in notifications."""
-        return text.replace("[", "\\[").replace("]", "\\]").replace("!", "\\!")
-
-    def _highlight_current_link(self, content: str) -> str:
-        """Add highlighting to the currently selected link using position-based replacement."""
-        if self.current_link_index < 0 or self.current_link_index >= len(
-            self.current_links
-        ):
-            return content
-
-        # Get the current link with position
-        link_text, link_url, start_pos, end_pos = self.current_links[
-            self.current_link_index
-        ]
-
-        # Create highlighted version
-        highlighted_link = f"**→ [{link_text}]({link_url}) ←**"
-
-        # Replace the content at the specific position
-        # Split content into: before_link + highlighted_link + after_link
-        before = content[:start_pos]
-        after = content[end_pos:]
-
-        return before + highlighted_link + after
 
     def action_next_link(self) -> None:
         """Navigate to the next link."""
-        if not self.current_links:
-            return
-
-        self.current_link_index = (self.current_link_index + 1) % len(
-            self.current_links
-        )
-        self._update_current_view_with_highlight()
+        self.link_manager.navigate_next_link()
 
     def action_prev_link(self) -> None:
         """Navigate to the previous link."""
-        if not self.current_links:
-            return
-
-        self.current_link_index = (self.current_link_index - 1) % len(
-            self.current_links
-        )
-        self._update_current_view_with_highlight()
+        self.link_manager.navigate_prev_link()
 
     async def action_open_link(self) -> None:
         """Open the currently selected link."""
-        if self.current_link_index < 0 or self.current_link_index >= len(
-            self.current_links
-        ):
-            self.notify("No link selected", severity="warning")
-            return
+        await self.link_manager.open_current_link()
 
-        link_text, link_url, _, _ = self.current_links[self.current_link_index]
-
-        # Handle URL resolution
+    def _resolve_url(self, url: str) -> str:
+        """Resolve a URL against the current page URL, handling relative URLs."""
         from urllib.parse import urljoin
-
-        if not link_url.startswith(("http://", "https://")):
+        
+        if not url.startswith(("http://", "https://")):
             if self.current_url:
                 # For all relative URLs (including root-relative /path), resolve against current URL
-                link_url = urljoin(self.current_url, link_url)
+                url = urljoin(self.current_url, url)
             else:
                 # If no current URL context, assume https
-                if link_url.startswith("/"):
-                    link_url = f"https://example.com{link_url}"  # Fallback
+                if url.startswith("/"):
+                    url = f"https://example.com{url}"  # Fallback
                 else:
-                    link_url = f"https://{link_url}"
+                    url = f"https://{url}"
+        return url
 
-        self.notify(f"Opening: {self._escape_markup(link_text)}")
-        await self.fetch_and_display_url(link_url)
-
-    def _update_current_view_with_highlight(self) -> None:
-        """Update the current view content with link highlighting."""
-        if self.current_view not in self.original_content:
-            return
-
-        original = self.original_content[self.current_view]
-        highlighted = self._highlight_current_link(original)
-
-        try:
-            content_widget = self.query_one(
-                f"#content-{self.current_view}", HTMLContent
-            )
-            content_widget.update(highlighted)
-        except Exception:
-            pass
 
     def handle_internal_link_click(self, href: str) -> None:
         """Handle link clicks from markdown content to navigate within the browser."""
-        # Resolve the URL using the same logic as keyboard navigation
-        from urllib.parse import urljoin
-
         # Handle URL resolution
-        if not href.startswith(("http://", "https://")):
-            if self.current_url:
-                # For all relative URLs (including root-relative /path), resolve against current URL
-                href = urljoin(self.current_url, href)
-            else:
-                # If no current URL context, assume https
-                if href.startswith("/"):
-                    href = f"https://example.com{href}"  # Fallback
-                else:
-                    href = f"https://{href}"
+        href = self._resolve_url(href)
 
         # Special handling for mailto links
         if href.startswith("mailto:"):

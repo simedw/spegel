@@ -7,9 +7,21 @@ interface allows us to add more providers later without touching UI code.
 """
 
 import os
+import logging
 from typing import AsyncIterator, Dict, Any
-from pathlib import Path
-from datetime import datetime, timezone
+
+# Configure logger for LLM interactions (disabled by default)
+logger = logging.getLogger("spegel.llm")
+logger.setLevel(logging.CRITICAL + 1)  # Effectively disabled by default
+
+def enable_llm_logging(level: int = logging.INFO) -> None:
+    """Enable LLM interaction logging at the specified level."""
+    logger.setLevel(level)
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
 try:
     from google import genai
@@ -64,14 +76,8 @@ class GeminiClient(LLMClient):
             config=generation_config,
         )
 
-        log_path = Path("/tmp/spegel.log")
-        # Write prompt to log with timestamp
-        try:
-            with log_path.open("a", encoding="utf-8") as fp:
-                fp.write(f"\n[{datetime.now(timezone.utc).isoformat()}] PROMPT\n")
-                fp.write(user_content + "\n")
-        except Exception:
-            pass  # Logging failures shouldn't break the app
+        # Log the prompt if logging is enabled
+        logger.info("LLM Prompt: %s", user_content)
 
         collected: list[str] = []
 
@@ -84,14 +90,9 @@ class GeminiClient(LLMClient):
             except Exception:
                 continue
 
-        # After streaming finished, write output to log
+        # Log the complete response if logging is enabled
         if collected:
-            try:
-                with log_path.open("a", encoding="utf-8") as fp:
-                    fp.write(f"[{datetime.now(timezone.utc).isoformat()}] OUTPUT\n")
-                    fp.write("".join(collected) + "\n")
-            except Exception:
-                pass
+            logger.info("LLM Response: %s", "".join(collected))
 
 
 # ---------------------------------------------------------------------------

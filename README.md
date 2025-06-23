@@ -1,6 +1,13 @@
 # Spegel – Reflect the web through AI
 
 Automatically rewrites the websites into markdown optimised for viewing in the terminal.
+Read intro blog post [here](https://simedw.com/2025/06/23/introducing-spegel/)
+
+
+##  Screenshot
+Sometimes you don't want to read through someone's life story just to get to a recipe
+![Recipe Example](https://simedw.com/2025/06/23/introducing-spegel/images/recipe_example.png)
+
 
 ## Installation
 
@@ -80,11 +87,6 @@ id = "terminal"
 name = "Terminal"
 prompt = "Transform this webpage into the perfect terminal browsing experience! ..."
 ```
-
-## Development
-- Source code: `src/spegel/`
-- Tests: `tests/`
-- Entry point: `spegel` (CLI) or `python -m spegel`
 
 ---
 

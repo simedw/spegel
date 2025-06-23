@@ -133,6 +133,8 @@ class TestSpegelApp:
                 # The argument should be a coroutine for fetch_and_display_url
                 call_args = app.run_async_task.call_args[0][0]
                 assert hasattr(call_args, '__await__')  # It's a coroutine
+                # Properly close the coroutine to avoid RuntimeWarning
+                call_args.close()
     
     def test_on_mount_no_startup_url(self):
         """on_mount should not trigger URL fetch if no startup URL."""

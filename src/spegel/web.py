@@ -146,7 +146,6 @@ def html_to_markdown(html: str, base_url: str | None = None) -> str:
     """Convert full HTML document to terminal-friendly markdown."""
     try:
         import html2text  # already dependency
-        from bs4 import BeautifulSoup
 
         h = html2text.HTML2Text()
         h.ignore_links = False
