@@ -113,6 +113,9 @@ def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any
             and isinstance(value, dict)
         ):
             result[key] = _deep_merge(result[key], value)
+        elif key == "views" and isinstance(value, list):
+            # Special handling for views: if custom config provides views, replace defaults entirely
+            result[key] = value
         else:
             result[key] = value
     return result
@@ -122,7 +125,7 @@ def load_config() -> FullConfig:
     """Load configuration from TOML files or fall back to defaults.
 
     Search order:
-      • ./spegel.toml
+      • ./.spegel.toml
       • ~/.spegel.toml
       • ~/.config/spegel/config.toml
     """
@@ -135,14 +138,18 @@ def load_config() -> FullConfig:
 
     merged: Dict[str, Any] = DEFAULT_CONFIG_DICT
 
+    # Only load the first config file found, not all of them
     for path in config_paths:
         if path.is_file():
             try:
                 with open(path, "rb") as f:
                     user_cfg = tomllib.load(f)
                     merged = _deep_merge(merged, user_cfg)  # type: ignore[arg-type]
+                    break  # Stop after loading the first config file
             except Exception as exc:
                 print(f"⚠️  Failed to load config from {path}: {exc}")
+                continue  # Try the next config file if this one fails
+                
     try:
         return FullConfig.model_validate(merged)
     except Exception as exc:  # pragma: no cover

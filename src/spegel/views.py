@@ -43,7 +43,7 @@ async def process_view(
 
     full_prompt = f"{view.prompt}\n\nWebpage content:\n{clean_text}"
 
-    parts: List[str] = [f"## ✨ {view.name}", ""]
+    parts: List[str] = []
     async for chunk in llm_client.stream(full_prompt, ""):
         if chunk:
             parts.append(chunk)

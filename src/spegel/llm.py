@@ -30,12 +30,13 @@ class LLMClient:
     async def stream(self, prompt: str, content: str, **kwargs) -> AsyncIterator[str]:
         """Yield chunks of markdown text."""
         raise NotImplementedError
+        yield # This is unreachable, but makes this an async generator
 
 
 class GeminiClient(LLMClient):
     """Wrapper around google-genai async streaming API."""
 
-    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash-preview-05-20"):
+    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash-lite-preview-06-17"):
         if genai is None:
             raise RuntimeError("google-genai not installed but GeminiClient requested")
         self._client = genai.Client(api_key=api_key)

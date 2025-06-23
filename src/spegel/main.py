@@ -4,11 +4,8 @@ Spegel - Reflect the web through AI
 """
 
 import asyncio
-import os
 from typing import Optional, Dict, List
 
-import requests
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import re
 from textual import on
@@ -277,6 +274,55 @@ class Spegel(App):
         # Navigate to the previous URL
         self.run_async_task(self.fetch_and_display_url(previous_url))
 
+    def action_scroll_up(self) -> None:
+        """Scroll the current content up."""
+        try:
+            content_widget = self.query_one(f"#content-{self.current_view}", HTMLContent)
+            content_widget.action_scroll_up()
+        except Exception:
+            pass  # Ignore if widget not found
+
+    def action_scroll_down(self) -> None:
+        """Scroll the current content down."""
+        try:
+            content_widget = self.query_one(f"#content-{self.current_view}", HTMLContent)
+            content_widget.action_scroll_down()
+        except Exception:
+            pass  # Ignore if widget not found
+
+    def _update_content_preserve_scroll(self, content_widget, new_content: str) -> None:
+        """Update content while preserving scroll position during streaming."""
+        try:
+            # Get current scroll position
+            scroll_y = content_widget.scroll_y
+            max_scroll_y = content_widget.max_scroll_y
+            
+            # Check if user is at the bottom (within a small threshold)
+            # If they are, we'll allow auto-scroll to continue
+            is_at_bottom = (max_scroll_y == 0) or (scroll_y >= max_scroll_y - 2)
+            
+            # Update the content
+            content_widget.update(new_content)
+            
+            # If user was not at the bottom, restore their scroll position
+            if not is_at_bottom:
+                # Small delay to allow content to render
+                self.call_after_refresh(lambda: self._restore_scroll_position(content_widget, scroll_y))
+                
+        except Exception:
+            # Fallback to regular update if scroll preservation fails
+            content_widget.update(new_content)
+
+    def _restore_scroll_position(self, content_widget, target_scroll_y: int) -> None:
+        """Restore scroll position after content update."""
+        try:
+            # Ensure we don't scroll beyond the new content bounds
+            max_scroll = content_widget.max_scroll_y
+            if max_scroll > 0:
+                content_widget.scroll_y = min(target_scroll_y, max_scroll)
+        except Exception:
+            pass  # Ignore if restoration fails
+
     @on(Input.Submitted, "#url-input")
     async def handle_url_submission(self, event: Input.Submitted) -> None:
         """Handle URL submission and fetch content."""
@@ -351,6 +397,17 @@ class Spegel(App):
                 await self.update_view_content(self.current_view)
 
             self.action_hide_overlays()
+            
+        # Handle arrow keys for scrolling when not in overlays
+        if not self.url_input_visible and not self.prompt_editor_visible:
+            if event.key == "up":
+                self.action_scroll_up()
+                event.prevent_default()
+                return
+            elif event.key == "down":
+                self.action_scroll_down()
+                event.prevent_default()
+                return
 
     @on(TabbedContent.TabActivated)
     async def handle_tab_change(self, event: TabbedContent.TabActivated) -> None:
@@ -574,10 +631,9 @@ class Spegel(App):
                     self.notify("No navigable links found on this page.", timeout=3)
         else:
             # Other views – use the central processor
-            header_lines = [f"## ✨ {self.views[view_id].name}", "", "*Streaming response...*", ""]
-            content_widget.update("\n".join(header_lines))
+            content_widget.update("*Streaming response...*\n\n")
 
-            parts = [f"## ✨ {self.views[view_id].name}", ""]
+            running_content = ""
 
             async for chunk in stream_view(
                 self.views[view_id],
@@ -585,12 +641,13 @@ class Spegel(App):
                 self.llm_client,
                 self.current_url,
             ):
-                parts.append(chunk)
-                content_widget.update("\n".join(parts))
+                running_content += chunk
+                
+                # Preserve scroll position during streaming updates
+                self._update_content_preserve_scroll(content_widget, running_content)
 
-            generated = "\n".join(parts)
-            self.original_content[view_id] = generated
-            links = self._extract_links_from_markdown(generated)
+            self.original_content[view_id] = running_content
+            links = self._extract_links_from_markdown(running_content)
 
             if self.current_view == view_id:
                 self.current_links = links

@@ -1,6 +1,6 @@
 # Spegel – Reflect the web through AI
 
-A terminal-based web browser with LLM-powered content transformation.
+Automatically rewrites the websites into markdown optimised for viewing in the terminal.
 
 ## Installation
 
@@ -15,13 +15,21 @@ $ cd llm-browser
 $ pip install -e .
 ```
 
+## API Keys
+Spegel is currently only support Gemini 2.5 Flash, to use it you need to provide your API key in the env
+
+```
+GEMINI_API_KEY=...
+```
+
+
 ## Usage
 
 ### Launch the browser
 
 ```bash
 spegel                # Start with welcome screen
-spegel bbc.com        # Open a URL immediately (https:// auto-added)
+spegel bbc.com        # Open a URL immediately
 ```
 
 Or, equivalently:
