@@ -760,6 +760,7 @@ class Spegel(App):
             content_widget.update("*Streaming response...*\n\n")
 
             running_content = ""
+            chunk_count = 0
 
             async for chunk in stream_view(
                 self.views[view_id],
@@ -768,10 +769,16 @@ class Spegel(App):
                 self.current_url,
             ):
                 running_content += chunk
+                chunk_count += 1
                 
-                # Preserve scroll position during streaming updates
-                self.scroll_manager.update_content_preserve_scroll(content_widget, running_content)
+                # Throttle UI updates - only update every 3 chunks to avoid overwhelming Textual
+                if chunk_count % 3 == 0:
+                    # Preserve scroll position during streaming updates
+                    self.scroll_manager.update_content_preserve_scroll(content_widget, running_content)
 
+            # Final update to ensure we show the complete content
+            self.scroll_manager.update_content_preserve_scroll(content_widget, running_content)
+            
             self.original_content[view_id] = running_content
             self.link_manager.update_links(running_content, view_id)
 
