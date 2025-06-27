@@ -3,6 +3,7 @@
 Automatically rewrites the websites into markdown optimised for viewing in the terminal.
 Read intro blog post [here](https://simedw.com/2025/06/23/introducing-spegel/)
 
+This is a proof-of-concepts, bugs are to be expected but feel free to raise an issue or pull request.
 
 ##  Screenshot
 Sometimes you don't want to read through someone's life story just to get to a recipe
