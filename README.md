@@ -12,12 +12,17 @@ Sometimes you don't want to read through someone's life story just to get to a r
 
 ## Installation
 
-Clone the repo and install in editable mode (requires Python 3.10+):
+Requires Python 3.11+
+
+```
+pip install spegel
+```
+or clone the repo and install it editable mode
 
 ```bash
 # Clone and enter the directory
 $ git clone <repo-url>
-$ cd llm-browser
+$ cd spegel
 
 # Install dependencies and the CLI
 $ pip install -e .
