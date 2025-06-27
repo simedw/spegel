@@ -78,68 +78,10 @@ prompt = """Transform this webpage into the perfect terminal browsing experience
 Make this webpage PERFECT for someone browsing in a small terminal window!"""
 
 [[views]]
-id = "actions"
-name = "Actions"
-hotkey = "3"
-order = 3
-enabled = true
-auto_load = false            # Load on-demand only
-description = "Extract all possible user actions as clickable links"
-icon = "⚡"
-prompt = """Extract every possible action a user can take on this webpage.
-
-**OUTPUT FORMAT: Use markdown with clickable links [text](url)**
-
-**FIND ALL ACTIONS:**
-
-**Navigation & Links:**
-- Main navigation menu items - format as: [Menu Item](url)
-- Sidebar links and secondary navigation
-- Footer links that lead to useful pages
-- Breadcrumb navigation links
-
-**Interactive Elements:**
-- Buttons and calls-to-action - format as: [Button Text](url)
-- Form submission endpoints (if visible)
-- Download links - format as: [Download: filename](url)
-- Social media links - format as: [Platform](url)
-
-**Content Actions:**
-- Article/post links - format as: [Article Title](url)
-- Comment sections or discussion links
-- Share buttons and social actions
-- Print, save, bookmark options
-
-**User Account Actions:**
-- Login/signup links - format as: [Login](url) or [Sign Up](url)
-- Profile, settings, dashboard links
-- Logout or account management
-
-**E-commerce Actions:**
-- Product links - format as: [Product Name](url)
-- Add to cart, buy now, checkout buttons
-- Wishlist, compare, review actions
-
-**Search & Filter:**
-- Search functionality
-- Category filters and sorting options
-- Advanced search or filter pages
-
-**ORGANIZATION:**
-Use clear categories with headers:
-## 🔗 Primary Actions
-## 📱 Navigation
-## 🛒 Shopping Actions
-## 👤 Account Actions
-## 🔍 Search & Discovery
-
-Make every actionable item a clickable link so users can navigate directly."""
-
-[[views]]
 id = "summary"
 name = "Summary"
-hotkey = "4"
-order = 4
+hotkey = "3"
+order = 3
 enabled = true
 auto_load = false            # Load on-demand only
 description = "AI-powered content summary with navigable links"
@@ -179,54 +121,10 @@ prompt = """Create a comprehensive but concise summary of this webpage content.
 Keep it brief but comprehensive with clear, navigable formatting."""
 
 [[views]]
-id = "contacts"
-name = "Contacts"
-hotkey = "5"
-order = 5
-enabled = true
-auto_load = false            # Load on-demand only
-description = "Extract contact information as clickable links"
-icon = "📞"
-prompt = """Extract all contact information from this webpage content.
-
-**OUTPUT FORMAT: Use markdown with clickable links [text](url) or [text](mailto:email)**
-
-Look for:
-
-**Email Addresses:**
-- Any email addresses - format as: [name@domain.com](mailto:name@domain.com)
-- Contact forms or email links
-
-**Phone Numbers:**
-- Phone numbers in any format (xxx-xxx-xxxx, +1 xxx xxx xxxx, etc.)
-- Toll-free numbers, international numbers
-
-**Physical Addresses:**
-- Street addresses, office locations
-- Mailing addresses, headquarters
-
-**Social Media & Online:**
-- Social media profiles - format as: [Twitter](https://twitter.com/username)
-- Website contact pages - format as: [Contact page](contact)
-- Support links
-
-**People & Roles:**
-- Contact person names and their roles - format as: [username](user?id=username)
-- Department-specific contacts
-
-Use markdown formatting:
-- **Bold** for categories
-- `code` for raw contact details
-- [Clickable links](url) for all actionable contacts
-- Bullet points for organization
-
-Make all contact information clickable where possible. If no contact info is found, say "No contact information detected on this page"."""
-
-[[views]]
 id = "eli5"
 name = "ELI5"
-hotkey = "6"
-order = 6
+hotkey = "4"
+order = 4
 enabled = true
 auto_load = false            # Load on-demand only
 description = "Explain content in simple, kid-friendly terms"
@@ -258,3 +156,32 @@ Structure it like:
 Use lots of emojis, simple sentences, and make everything sound exciting and fun! If it's technical, compare it to things kids understand like building blocks, toy cars, or video games.
 
 Remember: NO big words, NO complex concepts, just fun and simple explanations!""" 
+
+[[views]]
+id = "recipe"
+name = "Recipe"
+hotkey = "5"
+order = "5"
+enabled = true
+auto_load = false
+description = "Get to the point in recipes"
+icon = "🍳"
+prompt = """Parse a recipe and extract only the essential parts.
+Format the output like this:
+
+# Ingredients
+* 1 tbsp salt  
+* 400 g beef  
+
+# Steps
+1. Preheat the oven to 200°C (Gas Mark 6).  
+2. Wash and chop the carrots.  
+-----
+**Instructions:**
+
+* Use **metric units** (not imperial).
+* inches -> cm 
+* pounds -> kg
+* cups -> dl 
+* Keep the output **clean and minimal** — no extra commentary, tips, or nutrition facts.
+* Include the servings."""%                                
