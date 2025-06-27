@@ -65,6 +65,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: test
+    permissions:
+      id-token: write  # Required for trusted publishing
     
     steps:
     - name: Download build artifacts
@@ -77,4 +79,4 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }} 
+        # Uses trusted publishing - no password needed! 
