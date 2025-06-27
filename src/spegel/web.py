@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import re
+from typing import Optional, List
+import requests
+from bs4 import BeautifulSoup
+
 """Web fetching and HTML cleaning utilities for Spegel.
 
 This module centralises network I/O so the UI layer can remain async and testable.
 """
 
-import re
-from typing import Optional, List
-
-import requests
-from bs4 import BeautifulSoup
 
 __all__ = ["fetch_url", "extract_clean_text"]
 
@@ -180,7 +180,8 @@ def html_to_markdown(html: str, base_url: str | None = None) -> str:
 
 
 if __name__ == "__main__":
-    import argparse, sys
+    import argparse
+    import sys
 
     parser = argparse.ArgumentParser(description="Fetch a URL and print Spegel's cleaned text representation.")
     parser.add_argument("url", help="URL to fetch")

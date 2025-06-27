@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+import os
+import logging
+from typing import AsyncIterator, Dict, Any
+
 """Light abstraction layer over one or more LLM back-ends.
 
 Right now we only implement Google Gemini via `google-genai`, but the
 interface allows us to add more providers later without touching UI code.
 """
-
-import os
-import logging
-from typing import AsyncIterator, Dict, Any
 
 # Configure logger for LLM interactions (disabled by default)
 logger = logging.getLogger("spegel.llm")
@@ -109,7 +109,9 @@ def get_default_client() -> tuple[LLMClient | None, bool]:
 
 
 if __name__ == "__main__":
-    import argparse, asyncio, sys
+    import argparse
+    import asyncio
+    import sys
 
     parser = argparse.ArgumentParser(
         description="Quick CLI wrapper around the configured LLM to answer a prompt."

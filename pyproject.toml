@@ -3,7 +3,29 @@ name = "spegel"
 version = "0.1.0"
 description = "Spegel - Reflect the web through AI. A terminal browser with multiple AI-powered views."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    {name = "Simon Edwardsson", email = "simon.edwardsson@gmail.com"},
+]
+keywords = ["terminal", "browser", "ai", "llm", "web", "tui", "textual"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: Browsers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Terminals",
+    "Topic :: Text Processing :: Markup :: HTML",
+]
+
 dependencies = [
     "beautifulsoup4>=4.13.4",
     "google>=3.0.0",
@@ -13,9 +35,14 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "requests>=2.32.4",
     "textual>=3.3.0",
-    "tomli>=2.0.0; python_version<'3.11'",
     "pydantic>=2.7.1",
 ]
+
+[project.urls]
+"Homepage" = "https://github.com/simedw/spegel"
+"Repository" = "https://github.com/simedw/spegel"
+"Bug Tracker" = "https://github.com/simedw/spegel/issues"
+"Documentation" = "https://github.com/simedw/spegel#readme"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -30,4 +57,13 @@ spegel = "spegel.main:main"
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "build>=1.2.2.post1",
 ]

@@ -12,10 +12,10 @@ from textual import on
 
 # External modules
 from .config import load_config, View
-from .llm import get_default_client, LLMClient
+from .llm import get_default_client
 
 from textual.app import App, ComposeResult
-from textual.containers import Container, ScrollableContainer
+from textual.containers import Container
 from textual.widgets import (
     Footer,
     Header,
@@ -26,7 +26,6 @@ from textual.widgets import (
     TabPane,
     TextArea,
 )
-from textual.binding import Binding
 
 from .web import fetch_url as fetch_url_blocking, html_to_markdown
 from .views import stream_view
@@ -80,7 +79,6 @@ class LinkManager:
     
     def extract_links_from_markdown(self, content: str) -> List[tuple]:
         """Extract all links from markdown content with position tracking."""
-        import re
         # Regex to match markdown links: [text](url) - including angle brackets from html2text
         link_pattern = r"\[([^\]]+)\]\(([^)]+)\)"
 
@@ -894,7 +892,8 @@ def main() -> None:
         spegel https://news.ycombinator.com  # auto-loads URL on launch
     """
 
-    import argparse, sys
+    import argparse
+    import sys
 
     parser = argparse.ArgumentParser(prog="spegel", description="Spegel – Reflect the web through AI (terminal browser)")
     parser.add_argument("url", nargs="?", help="URL to open immediately on launch")
