@@ -37,7 +37,7 @@ async def process_view(
         return html_to_markdown(raw_html, url)
 
     # Non-raw views need the LLM
-    clean_text = extract_clean_text(raw_html, url, max_chars=8000)
+    clean_text = extract_clean_text(raw_html, url, max_chars=100_000)
 
     if llm_client is None:
         return "## LLM not available\n\nSet GEMINI_API_KEY to enable AI processing."
@@ -63,7 +63,7 @@ async def stream_view(
         yield html_to_markdown(raw_html, url)
         return
 
-    clean_text = extract_clean_text(raw_html, url, max_chars=8000)
+    clean_text = extract_clean_text(raw_html, url, max_chars=100_000)
     if llm_client is None:
         yield "## LLM not available\n\nSet GEMINI_API_KEY to enable AI processing."
         return

@@ -66,7 +66,7 @@ def extract_clean_text(
     *,
     max_chars: int | None = None,
 ) -> str:
-    """Return cleaned markdown using a negative-filter → html2text pipeline.
+    """Return cleaned markdown using a content-first approach with targeted noise removal.
 
     Parameters
     ----------
@@ -83,37 +83,71 @@ def extract_clean_text(
 
     soup = BeautifulSoup(html, "lxml")
 
-    # 1️⃣  Remove elements we definitely don't want
-    noise_selectors = [
-        "script",
-        "style",
-        "noscript",
-        "iframe",
-        "embed",
-        "object",
-        "nav",
-        "header",
-        "footer",
-        "aside",
-        "[role='navigation']",
-        "[aria-hidden='true']",
-        "[class*='sidebar']",
-        "[class*='advert']",
-        "[id*='sidebar']",
-        "[id*='advert']",
+    # 1️⃣ Try to find main content area first (content-first approach)
+    main_content = None
+    content_selectors = [
+        "main",
+        "article", 
+        ".post-content",
+        ".entry-content", 
+        ".content",
+        "[role='main']",
+        ".post",
+        ".hrecipe",  # Recipe-specific
+        "[itemtype*='Recipe']"  # Schema.org Recipe markup
     ]
-    for sel in noise_selectors:
-        for node in soup.select(sel):
-            node.decompose()
+    
+    for selector in content_selectors:
+        elements = soup.select(selector)
+        if elements:
+            # Use the element with the most text content
+            best_element = max(elements, key=lambda e: len(e.get_text(strip=True)))
+            content_text = best_element.get_text(strip=True)
+            if len(content_text) > 500:  # Substantial content
+                main_content = best_element
+                break
+    
+    # 2️⃣ If we found main content, use that. Otherwise, clean the whole page more conservatively
+    if main_content:
+        # Work with just the main content area
+        working_soup = BeautifulSoup(str(main_content), "lxml")
+        
+        # Remove only the most obvious noise from within the content
+        minimal_noise_selectors = [
+            "script", "style", "noscript", 
+            ".advertisement", ".ads", ".ad-container",
+            ".social-share", ".share-buttons",
+            "[aria-hidden='true']"
+        ]
+        for sel in minimal_noise_selectors:
+            for node in working_soup.select(sel):
+                node.decompose()
+    else:
+        # Fallback: clean the whole page but be more conservative
+        working_soup = soup
+        
+        # More targeted noise removal (avoid overly broad selectors)  
+        conservative_noise_selectors = [
+            "script", "style", "noscript", "iframe", "embed", "object",
+            "nav", "header", "footer",
+            "[role='navigation']", "[role='banner']", "[role='contentinfo']",
+            "[aria-hidden='true']",
+            ".advertisement", ".ads", ".ad-container", ".sidebar-ads",
+            ".social-share", ".share-buttons", ".social-media",
+            ".cookie-notice", ".newsletter-signup"
+        ]
+        for sel in conservative_noise_selectors:
+            for node in working_soup.select(sel):
+                node.decompose()
 
-    # 2️⃣  Convert remaining HTML to Markdown via html2text
+    # 3️⃣ Convert remaining HTML to Markdown via html2text
     try:
         import html2text  # lazy import; already dependency of project
     except ImportError:
         html2text = None  # type: ignore
 
     if html2text is None:
-        cleaned_markdown = soup.get_text("\n", strip=True)
+        cleaned_markdown = working_soup.get_text("\n", strip=True)
     else:
         h = html2text.HTML2Text()
         h.ignore_links = False
@@ -121,10 +155,9 @@ def extract_clean_text(
         h.body_width = None
         h.wrap_links = False
         h.protect_links = True
-        cleaned_markdown = h.handle(str(soup))
+        cleaned_markdown = h.handle(str(working_soup))
         # html2text wraps URLs in <...>. Remove the angle brackets for cleaner markdown.
         cleaned_markdown = re.sub(r"\]\(<([^>]+)>\)", r"](\1)", cleaned_markdown)
-
 
     # Optional truncation for token safety when used inside the browser
     if max_chars is not None and len(cleaned_markdown) > max_chars:
