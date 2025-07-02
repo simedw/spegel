@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from logging import CRITICAL, Formatter, Logger, StreamHandler
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 # Configure logger for LLM interactions (disabled by default)
 logger: Logger = logging.getLogger("spegel.llm")
@@ -28,7 +28,7 @@ class LLMClient(ABC):
     """Abstract asynchronous client interface for LLM providers."""
 
     def __init__(self, api_key: str, model: str, temperature: float = 0.2, max_tokens: int = 8192):
-        self.api_key = api_key
+        self.api_key = SecretStr(api_key)
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -56,7 +56,8 @@ class LLMClient(ABC):
     def _log_response(self, response_chunks: list[str]) -> None:
         """Log the complete response if logging is enabled."""
         if response_chunks:
-            logger.info("LLM Response: %s", "".join(response_chunks))
+            response_text = "".join(response_chunks)
+            logger.info("LLM Response: %s", response_text)
 
 
 class ProviderMeta(BaseModel):

@@ -75,18 +75,22 @@ class ProviderRegistry:
 
 
 def create_client(ai_config: AI) -> LLMClient | None:
+    from rich import print as rich_print
+
     api_key: str | None = os.getenv(ai_config.api_key_env)
     if not api_key:
         logger.warning(f"No API key found in environment variable: {ai_config.api_key_env}")
         return None
-
-    return ProviderRegistry.create_client_for_provider(
+    rich_print(f"[cyan]Loading LLM:[/cyan] [blue]{ai_config.provider}: {ai_config.model}[/blue]")
+    client: LLMClient | None = ProviderRegistry.create_client_for_provider(
         provider=ai_config.provider,
         api_key=api_key,
         model=ai_config.model,
         temperature=ai_config.temperature,
         max_tokens=ai_config.max_tokens,
     )
+
+    return client
 
 
 def get_default_client() -> LLMClient | None:
