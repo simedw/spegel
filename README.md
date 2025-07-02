@@ -14,10 +14,30 @@ Sometimes you don't want to read through someone's life story just to get to a r
 
 Requires Python 3.11+
 
-```
+### Basic installation
+```bash
 pip install spegel
 ```
-or clone the repo and install it editable mode
+
+### With AI providers
+Choose your preferred AI provider(s):
+
+```bash
+# Install with OpenAI support
+pip install "spegel[openai]"
+
+# Install with Gemini support  
+pip install "spegel[gemini]"
+
+# Install with Claude support
+pip install "spegel[claude]"
+
+# Install with all ai providers
+pip install "spegel[all]"
+```
+
+### From source
+Clone the repo and install in editable mode: 
 
 ```bash
 # Clone and enter the directory
@@ -26,14 +46,33 @@ $ cd spegel
 
 # Install dependencies and the CLI
 $ pip install -e .
+
+# Or with specific providers
+$ pip install -e ".[openai]"
+$ pip install -e ".[gemini]" 
+$ pip install -e ".[claude]"
+$ pip install -e ".[all]"
 ```
 
 ## API Keys
-Spegel is currently only support Gemini 2.5 Flash, to use it you need to provide your API key in the env
+Spegel supports multiple AI providers. Configure your API key(s):
 
+### For Gemini
+```bash
+export GEMINI_API_KEY=your_gemini_api_key_here
 ```
-GEMINI_API_KEY=...
+
+### For OpenAI
+```bash
+export OPENAI_API_KEY=your_openai_api_key_here
 ```
+
+### For Claude
+```bash
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```
+
+You can configure which provider to use in your config file (see [Editing settings](#editing-settings) below).
 
 
 ## Usage
@@ -77,8 +116,25 @@ To edit settings:
    ```
 2. Edit `.spegel.toml` in your favorite editor.
 
+### AI Provider Configuration
+
+The `[ai]` section configures which AI provider to use:
+
+- **`provider`**: Choose `"gemini"`, `"openai"`, or `"claude"`
+- **`model`**: Model name (e.g., `"gemini-2.5-flash-lite-preview-06-17"` for Gemini, `"gpt-4.1-nano"` for OpenAI, `"claude-3-haiku-20240307"` for Claude)
+- **`api_key_env`**: Environment variable containing your API key (`"GEMINI_API_KEY"`, `"OPENAI_API_KEY"`, or `"ANTHROPIC_API_KEY"`) (`DO NOT PUT YOUR API KEY HERE!`)
+- **`temperature`**: Controls creativity (0.0 = deterministic, 2.0 = very creative)
+- **`max_tokens`**: Maximum response length
+
 Example snippet:
 ```toml
+[ai]
+provider = "gemini"
+model = "gemini-2.5-flash-lite-preview-06-17"
+api_key_env = "GEMINI_API_KEY"
+temperature = 0.2
+max_tokens = 8192
+
 [settings]
 default_view = "terminal"
 app_title = "Spegel"

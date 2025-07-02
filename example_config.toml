@@ -1,6 +1,21 @@
 # Spegel Configuration
 # Reflect the web through AI - see content from every angle
 
+[ai]
+provider = "gemini"                            # Choose your AI provider: "gemini" or "openai" or "claude"
+model = "gemini-2.5-flash-lite-preview-06-17"  # or "gemini-2.0-flash-lite", etc.
+api_key_env = "GEMINI_API_KEY"                 # or "OPENAI_API_KEY" for OpenAI, etc  DO NOT PUT YOUR API KEY HERE!
+temperature = 0.2                              # Controls randomness (0.0 = deterministic, 2.0 = very creative)
+max_tokens = 8192                              # Maximum tokens to generate
+
+# Example for OpenAI configuration:
+# [ai]
+# provider = "openai"
+# model = "gpt-4.1-nano"
+# api_key_env = "OPENAI_API_KEY"
+# temperature = 0.2
+# max_tokens = 8192
+
 [settings]
 default_view = "terminal"     # Which view to show first
 max_history = 50             # URL history limit  
@@ -184,4 +199,4 @@ Format the output like this:
 * pounds -> kg
 * cups -> dl 
 * Keep the output **clean and minimal** — no extra commentary, tips, or nutrition facts.
-* Include the servings."""%                                
+* Include the servings."""

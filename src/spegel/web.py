@@ -1,29 +1,35 @@
-from __future__ import annotations
-
-import re
-from typing import Optional, List
-import requests
-from bs4 import BeautifulSoup
-
 """Web fetching and HTML cleaning utilities for Spegel.
 
 This module centralises network I/O so the UI layer can remain async and testable.
 """
 
+from __future__ import annotations
 
-__all__ = ["fetch_url", "extract_clean_text"]
+import re
+
+import html2text
+from bs4 import BeautifulSoup, Tag
+from bs4.element import NavigableString, PageElement
+from httpx import RequestError, Response, get
+
+HEADERS: dict[str, str] = {"User-Agent": "Spegel/1.0 (Terminal Browser)"}
 
 
-HEADERS = {"User-Agent": "Spegel/1.0 (Terminal Browser)"}
+def fetch_url(url: str, timeout: int = 10) -> str | None:
+    """Blocking HTTP GET returning the raw HTML text or None on error.
 
+    Args:
+        url (str): The URL to fetch.
+        timeout (int): Timeout in seconds for the request (default is 10).
 
-def fetch_url(url: str, timeout: int = 10) -> Optional[str]:
-    """Blocking HTTP GET returning the raw HTML text or None on error."""
+    Returns:
+        str | None: The raw HTML text if successful, or None if an error occurred.
+    """
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=timeout)
+        resp: Response = get(url, headers=HEADERS, timeout=timeout)
         resp.raise_for_status()
         return resp.text
-    except requests.RequestException:
+    except RequestError:
         return None
 
 
@@ -32,12 +38,12 @@ def fetch_url(url: str, timeout: int = 10) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 
-def _extract_table_content(table) -> List[str]:
-    content: List[str] = []
+def _extract_table_content(table) -> list[str]:
+    content: list[str] = []
     for row in table.find_all("tr"):
         cells = row.find_all(["td", "th"])
         if cells:
-            row_content: List[str] = []
+            row_content: list[str] = []
             for cell in cells:
                 links = cell.find_all("a")
                 if links:
@@ -54,7 +60,7 @@ def _extract_table_content(table) -> List[str]:
                     if cell_text and len(cell_text) > 2:
                         row_content.append(cell_text)
             if row_content:
-                combined = " | ".join(row_content)
+                combined: str = " | ".join(row_content)
                 if len(combined) > 10:
                     content.append(combined)
     return content
@@ -87,16 +93,16 @@ def extract_clean_text(
     main_content = None
     content_selectors = [
         "main",
-        "article", 
+        "article",
         ".post-content",
-        ".entry-content", 
+        ".entry-content",
         ".content",
         "[role='main']",
         ".post",
         ".hrecipe",  # Recipe-specific
-        "[itemtype*='Recipe']"  # Schema.org Recipe markup
+        "[itemtype*='Recipe']",  # Schema.org Recipe markup
     ]
-    
+
     for selector in content_selectors:
         elements = soup.select(selector)
         if elements:
@@ -106,67 +112,79 @@ def extract_clean_text(
             if len(content_text) > 500:  # Substantial content
                 main_content = best_element
                 break
-    
+
     # 2️⃣ If we found main content, use that. Otherwise, clean the whole page more conservatively
     if main_content:
         # Work with just the main content area
         working_soup = BeautifulSoup(str(main_content), "lxml")
-        
+
         # Remove only the most obvious noise from within the content
-        minimal_noise_selectors = [
-            "script", "style", "noscript", 
-            ".advertisement", ".ads", ".ad-container",
-            ".social-share", ".share-buttons",
-            "[aria-hidden='true']"
+        minimal_noise_selectors: list[str] = [
+            "script",
+            "style",
+            "noscript",
+            ".advertisement",
+            ".ads",
+            ".ad-container",
+            ".social-share",
+            ".share-buttons",
+            "[aria-hidden='true']",
         ]
         for sel in minimal_noise_selectors:
             for node in working_soup.select(sel):
                 node.decompose()
     else:
         # Fallback: clean the whole page but be more conservative
-        working_soup = soup
-        
-        # More targeted noise removal (avoid overly broad selectors)  
-        conservative_noise_selectors = [
-            "script", "style", "noscript", "iframe", "embed", "object",
-            "nav", "header", "footer",
-            "[role='navigation']", "[role='banner']", "[role='contentinfo']",
+        working_soup: BeautifulSoup = soup
+
+        # More targeted noise removal (avoid overly broad selectors)
+        conservative_noise_selectors: list[str] = [
+            "script",
+            "style",
+            "noscript",
+            "iframe",
+            "embed",
+            "object",
+            "nav",
+            "header",
+            "footer",
+            "[role='navigation']",
+            "[role='banner']",
+            "[role='contentinfo']",
             "[aria-hidden='true']",
-            ".advertisement", ".ads", ".ad-container", ".sidebar-ads",
-            ".social-share", ".share-buttons", ".social-media",
-            ".cookie-notice", ".newsletter-signup"
+            ".advertisement",
+            ".ads",
+            ".ad-container",
+            ".sidebar-ads",
+            ".social-share",
+            ".share-buttons",
+            ".social-media",
+            ".cookie-notice",
+            ".newsletter-signup",
         ]
         for sel in conservative_noise_selectors:
             for node in working_soup.select(sel):
                 node.decompose()
 
     # 3️⃣ Convert remaining HTML to Markdown via html2text
-    try:
-        import html2text  # lazy import; already dependency of project
-    except ImportError:
-        html2text = None  # type: ignore
-
-    if html2text is None:
-        cleaned_markdown = working_soup.get_text("\n", strip=True)
-    else:
-        h = html2text.HTML2Text()
-        h.ignore_links = False
-        h.ignore_images = True
-        h.body_width = None
-        h.wrap_links = False
-        h.protect_links = True
-        cleaned_markdown = h.handle(str(working_soup))
-        # html2text wraps URLs in <...>. Remove the angle brackets for cleaner markdown.
-        cleaned_markdown = re.sub(r"\]\(<([^>]+)>\)", r"](\1)", cleaned_markdown)
+    h = html2text.HTML2Text()
+    h.ignore_links = False
+    h.ignore_images = True
+    h.body_width = 0  # disable line wrapping
+    h.wrap_links = False
+    h.protect_links = True
+    cleaned_markdown: str = h.handle(str(working_soup))
+    # html2text wraps URLs in <...>. Remove the angle brackets for cleaner markdown.
+    cleaned_markdown: str = re.sub(r"\]\(<([^>]+)>\)", r"](\1)", cleaned_markdown)
 
     # Optional truncation for token safety when used inside the browser
     if max_chars is not None and len(cleaned_markdown) > max_chars:
-        cleaned_markdown = cleaned_markdown[:max_chars] + "\n...(truncated)"
+        cleaned_markdown: str = cleaned_markdown[:max_chars] + "\n...(truncated)"
 
-    title_tag = soup.find("title")
-    title_text = title_tag.get_text().strip() if title_tag else "No Title"
+    title_tag: PageElement | Tag | NavigableString | None = soup.find("title")
+    title_text: str = title_tag.get_text().strip() if title_tag else "No Title"
 
-    header = f"Title: {title_text}\nURL: {url or ''}\n\n"
+    header: str = f"Title: {title_text}\nURL: {url or ''}\n\n"
     return header + cleaned_markdown
 
 
@@ -178,13 +196,11 @@ def extract_clean_text(
 def html_to_markdown(html: str, base_url: str | None = None) -> str:
     """Convert full HTML document to terminal-friendly markdown."""
     try:
-        import html2text  # already dependency
-
         h = html2text.HTML2Text()
         h.ignore_links = False
         h.ignore_images = False
         h.ignore_emphasis = False
-        h.body_width = None  # disable line wrapping to avoid broken URLs
+        h.body_width = 0  # disable line wrapping to avoid broken URLs
         h.wrap_links = False
         h.unicode_snob = True
         h.skip_internal_links = True
@@ -196,10 +212,12 @@ def html_to_markdown(html: str, base_url: str | None = None) -> str:
 
         # 1) Remove angle brackets around URLs
         markdown_content = re.sub(r"\]\(<([^>]+)>\)", r"](\1)", markdown_content)
+
         # 2) Collapse whitespace inside URL parentheses which can appear when html2text wraps long links
         def _fix(m):
             url = re.sub(r"\s+", "", m.group(1))
             return f"]({url})"
+
         markdown_content = re.sub(r"\]\(([^)]+)\)", _fix, markdown_content)
 
         soup = BeautifulSoup(html, "lxml")
@@ -211,6 +229,8 @@ def html_to_markdown(html: str, base_url: str | None = None) -> str:
     except Exception as exc:
         return f"## ❌ Error parsing HTML\n\n```\n{exc}\n```"
 
+
+__all__ = ["fetch_url", "extract_clean_text"]
 
 if __name__ == "__main__":
     import argparse
@@ -225,4 +245,4 @@ if __name__ == "__main__":
         print("Error: Failed to fetch URL", file=sys.stderr)
         sys.exit(1)
 
-    print(extract_clean_text(html, args.url)) 
+    print(extract_clean_text(html, args.url))
