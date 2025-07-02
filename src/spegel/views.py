@@ -9,7 +9,7 @@ place without breaking runtime behaviour.
 from __future__ import annotations
 
 from .config import View
-from .llm import LLMClient
+from .llm import LLMClient, get_llm_unavailable_message
 from .web import extract_clean_text, html_to_markdown
 
 
@@ -35,7 +35,7 @@ async def process_view(
     clean_text = extract_clean_text(raw_html, url, max_chars=100_000)
 
     if llm_client is None:
-        return "## LLM not available\n\nSet API key (GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY) to enable AI processing."
+        return get_llm_unavailable_message()
 
     full_prompt = f"{view.prompt}\n\nWebpage content:\n{clean_text}"
 
@@ -60,7 +60,7 @@ async def stream_view(
 
     clean_text = extract_clean_text(raw_html, url, max_chars=100_000)
     if llm_client is None:
-        yield "## LLM not available\n\nSet API key (GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY) to enable AI processing."
+        yield get_llm_unavailable_message()
         return
 
     full_prompt = f"{view.prompt}\n\nWebpage content:\n{clean_text}"

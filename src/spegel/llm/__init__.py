@@ -118,6 +118,16 @@ def get_defaults() -> ProviderMeta:
     raise RuntimeError("No available LLM providers found. Please install the required packages.")
 
 
+def get_llm_unavailable_message() -> str:
+    """Generate a dynamic error message listing all available provider API keys."""
+    providers = ProviderRegistry.get_all_providers()
+    if not providers:
+        return "## LLM not available\n\nNo LLM providers found. Please install required packages."
+
+    api_keys = [provider_meta.api_key_env for provider_meta in providers.values()]
+    return f"## LLM not available\n\nSet API key ({', '.join(api_keys)}) to enable AI processing."
+
+
 __all__ = [
     "LLMClient",
     "ProviderMeta",
@@ -128,4 +138,5 @@ __all__ = [
     "get_default_model_for_provider",
     "get_default_api_key_env_for_provider",
     "get_defaults",
+    "get_llm_unavailable_message",
 ]

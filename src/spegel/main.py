@@ -630,8 +630,12 @@ class Spegel(App):
                         f"## ⏳ Preparing AI Analysis\n\n**{self.views[view_id].name}** - Getting ready to stream...\n\n*AI response will appear here in real-time.*"
                     )
                 else:
+                    # Generate dynamic error message based on current default provider
+                    from .llm import get_defaults
+
+                    default_provider = get_defaults()
                     content_widget.update(
-                        f"## LLM not available\n\nAdd `GEMINI_API_KEY` to .env file\n\n**View:** {self.views[view_id].description}"
+                        f"## LLM not available\n\nAdd `{default_provider.api_key_env}` to .env file\n\n**View:** {self.views[view_id].description}"
                     )
 
             # Yield control to allow UI updates
