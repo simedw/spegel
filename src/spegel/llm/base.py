@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from logging import CRITICAL, Formatter, Logger, StreamHandler
 
+from pydantic import BaseModel
+
 # Configure logger for LLM interactions (disabled by default)
 logger: Logger = logging.getLogger("spegel.llm")
 logger.setLevel(level=CRITICAL + 1)  # Effectively disabled by default
@@ -55,3 +57,23 @@ class LLMClient(ABC):
         """Log the complete response if logging is enabled."""
         if response_chunks:
             logger.info("LLM Response: %s", "".join(response_chunks))
+
+
+class ProviderMeta(BaseModel):
+    """Base metadata class for LLM providers."""
+
+    name: str
+    default_model: str
+    api_key_env: str
+
+    @classmethod
+    @abstractmethod
+    def is_available(cls) -> bool:
+        """Check if this provider is available (dependencies installed, etc)."""
+        pass
+
+    @classmethod
+    @abstractmethod
+    def get_client_class(cls) -> type[LLMClient] | None:
+        """Get the client class for this provider, or None if not available."""
+        pass

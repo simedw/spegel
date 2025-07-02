@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
-from .base import LLMClient
+from .base import LLMClient, ProviderMeta
 
 try:
     from anthropic import AsyncAnthropic
@@ -50,7 +50,6 @@ class ClaudeClient(LLMClient):
         system_message: str | None = None
 
         if prompt and content:
-            # Both prompt and content provided - prompt is system, content is user
             system_message = prompt
             messages: list[dict[str, str]] = [{"role": "user", "content": content}]
         elif prompt and not content:
@@ -94,3 +93,20 @@ class ClaudeClient(LLMClient):
 def is_available() -> bool:
     """Check if Claude provider is available."""
     return CLAUDE_AVAILABLE
+
+
+class ClaudeProviderMeta(ProviderMeta):
+    name: str = "claude"
+    default_model: str = DEFAULT_MODEL
+    api_key_env: str = DEFAULT_API_KEY_ENV
+
+    @classmethod
+    def is_available(cls) -> bool:
+        return is_available()
+
+    @classmethod
+    def get_client_class(cls):
+        return ClaudeClient if CLAUDE_AVAILABLE else None
+
+
+PROVIDER_META = ClaudeProviderMeta

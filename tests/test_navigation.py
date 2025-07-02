@@ -1,14 +1,42 @@
-import sys
-from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
-
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 import pytest
 
 from spegel.main import LinkManager, Spegel
+
+
+def create_mock_config(
+    views=None,
+    default_view="raw",
+    app_title="Test",
+    ai_provider="gemini",
+    ai_model="gemini-2.5-flash-lite-preview-06-17",
+    ai_api_key_env="GEMINI_API_KEY",
+    ai_temperature=0.2,
+    ai_max_tokens=8192,
+):
+    """Create a mock configuration object with sensible defaults."""
+    mock_config = Mock()
+
+    # AI configuration - use a proper Mock that returns the right values
+    ai_mock = Mock()
+    ai_mock.provider = ai_provider
+    ai_mock.model = ai_model
+    ai_mock.api_key_env = ai_api_key_env
+    ai_mock.temperature = ai_temperature
+    ai_mock.max_tokens = ai_max_tokens
+    mock_config.ai = ai_mock
+
+    # Views configuration
+    mock_config.views = views if views is not None else []
+
+    # Settings configuration - use a proper Mock that returns the right values
+    settings_mock = Mock()
+    settings_mock.default_view = default_view
+    settings_mock.app_title = app_title
+    mock_config.settings = settings_mock
+
+    return mock_config
 
 
 class TestLinkManager:
@@ -217,22 +245,15 @@ class TestURLResolution:
     def setup_method(self):
         """Set up test fixtures."""
         with patch("spegel.main.load_config") as mock_load_config:
-            mock_config = Mock()
-            mock_config.ai = Mock()
-            mock_config.ai.provider = "gemini"
-            mock_config.ai.model = "gemini-2.5-flash-lite-preview-06-17"
-            mock_config.ai.api_key_env = "GEMINI_API_KEY"
-            mock_config.ai.temperature = 0.2
-            mock_config.ai.max_tokens = 8192
-            mock_config.views = []
-            mock_config.settings.default_view = "raw"
-            mock_config.settings.app_title = "Test"
+            mock_config = create_mock_config()
             mock_load_config.return_value = mock_config
 
             with patch("spegel.main.get_default_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
                 self.app = Spegel()
-                self.app.current_url = "https://example.com/page"
+        
+        # Set current_url after initialization to avoid Mock interference
+        self.app.current_url = "https://example.com/page"
 
     def test_resolve_absolute_url(self):
         """Test resolving absolute URLs."""
@@ -273,16 +294,7 @@ class TestHistoryManagement:
     def setup_method(self):
         """Set up test fixtures."""
         with patch("spegel.main.load_config") as mock_load_config:
-            mock_config = Mock()
-            mock_config.ai = Mock()
-            mock_config.ai.provider = "gemini"
-            mock_config.ai.model = "gemini-2.5-flash-lite-preview-06-17"
-            mock_config.ai.api_key_env = "GEMINI_API_KEY"
-            mock_config.ai.temperature = 0.2
-            mock_config.ai.max_tokens = 8192
-            mock_config.views = []
-            mock_config.settings.default_view = "raw"
-            mock_config.settings.app_title = "Test"
+            mock_config = create_mock_config()
             mock_load_config.return_value = mock_config
 
             with patch("spegel.main.get_default_client") as mock_get_client:
@@ -369,16 +381,7 @@ class TestURLInputHandling:
     def setup_method(self):
         """Set up test fixtures."""
         with patch("spegel.main.load_config") as mock_load_config:
-            mock_config = Mock()
-            mock_config.ai = Mock()
-            mock_config.ai.provider = "gemini"
-            mock_config.ai.model = "gemini-2.5-flash-lite-preview-06-17"
-            mock_config.ai.api_key_env = "GEMINI_API_KEY"
-            mock_config.ai.temperature = 0.2
-            mock_config.ai.max_tokens = 8192
-            mock_config.views = []
-            mock_config.settings.default_view = "raw"
-            mock_config.settings.app_title = "Test"
+            mock_config = create_mock_config()
             mock_load_config.return_value = mock_config
 
             with patch("spegel.main.get_default_client") as mock_get_client:

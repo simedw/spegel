@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from .base import LLMClient
+from .base import LLMClient, ProviderMeta
 
 try:
     from openai import AsyncOpenAI
@@ -57,7 +57,6 @@ class OpenAIClient(LLMClient):
         if content:
             messages.append({"role": "user", "content": content})
         elif not content and prompt:
-            # If no content provided, treat prompt as user message
             messages = [{"role": "user", "content": prompt}]
 
         self._log_request(prompt, content)
@@ -90,3 +89,20 @@ class OpenAIClient(LLMClient):
 def is_available() -> bool:
     """Check if OpenAI provider is available."""
     return OPENAI_AVAILABLE
+
+
+class OpenAIProviderMeta(ProviderMeta):
+    name: str = "openai"
+    default_model: str = DEFAULT_MODEL
+    api_key_env: str = DEFAULT_API_KEY_ENV
+
+    @classmethod
+    def is_available(cls) -> bool:
+        return is_available()
+
+    @classmethod
+    def get_client_class(cls):
+        return OpenAIClient if OPENAI_AVAILABLE else None
+
+
+PROVIDER_META = OpenAIProviderMeta

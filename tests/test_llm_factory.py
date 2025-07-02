@@ -97,22 +97,23 @@ class TestLegacyGetDefaultClient:
             assert client is None
 
     def test_get_default_client_prefers_gemini(self):
-        """When both API keys are set, should prefer Gemini."""
+        """When Gemini is available and others are not, should return GeminiClient."""
         with patch.dict(
             os.environ,
             {
                 GEMINI_API_KEY_ENV: "gemini-key",
-                OPENAI_API_KEY_ENV: "openai-key",
-                CLAUDE_API_KEY_ENV: "claude-key",
             },
+            clear=True,
         ):
             with patch("spegel.llm.gemini.genai") as mock_genai:
                 mock_genai.Client.return_value = Mock()
+                # Make sure only Gemini is available
+                with patch("spegel.llm.openai.OpenAIProviderMeta.is_available", return_value=False):
+                    with patch("spegel.llm.claude.ClaudeProviderMeta.is_available", return_value=False):
+                        client = get_default_client()
+                        from spegel.llm.gemini import GeminiClient
 
-                client = get_default_client()
-                from spegel.llm.gemini import GeminiClient
-
-                assert isinstance(client, GeminiClient)
+                        assert isinstance(client, GeminiClient)
 
     def test_get_default_client_falls_back_to_openai(self):
         """When only OpenAI key is set, should use OpenAI."""
@@ -139,11 +140,10 @@ class TestLegacyGetDefaultClient:
     def test_get_default_client_no_providers_available(self):
         """When API keys are set but no providers are available, should return None."""
         with patch.dict(os.environ, {GEMINI_API_KEY_ENV: "test-key"}):
-            with patch("spegel.llm.gemini_available", return_value=False):
-                with patch("spegel.llm.openai_available", return_value=False):
-                    with patch("spegel.llm.claude_available", return_value=False):
-                        client = get_default_client()
-                        assert client is None
+            # Mock all providers as unavailable using dynamic system
+            with patch("spegel.llm.ProviderRegistry.is_provider_available", return_value=False):
+                client = get_default_client()
+                assert client is None
 
 
 class TestConfigBasedClientCreation:
@@ -209,7 +209,7 @@ class TestConfigBasedClientCreation:
             with patch("spegel.llm.claude.AsyncAnthropic") as mock_anthropic:
                 mock_anthropic.return_value = Mock()
 
-                client = create_client(ai_config)
+                client: LLMClient | None = create_client(ai_config)
                 from spegel.llm.claude import ClaudeClient
 
                 assert isinstance(client, ClaudeClient)
@@ -230,24 +230,21 @@ class TestConfigBasedClientCreation:
         )
 
         with patch.dict(os.environ, {}, clear=True):
-            client = create_client(ai_config)
+            client: LLMClient | None = create_client(ai_config)
             assert client is None
 
     def test_create_client_unknown_provider(self):
         """Test client creation with unknown provider."""
         from spegel.config import AI
 
-        ai_config = AI(
-            provider="unknown_provider",
-            model="some-model",
-            api_key_env="SOME_API_KEY",
-            temperature=0.2,
-            max_tokens=8192,
-        )
-
-        with patch.dict(os.environ, {"SOME_API_KEY": "test-key"}):
-            client = create_client(ai_config)
-            assert client is None
+        with pytest.raises(ValueError, match="Invalid provider 'unknown_provider'"):
+            AI(
+                provider="unknown_provider",
+                model="some-model",
+                api_key_env="SOME_API_KEY",
+                temperature=0.2,
+                max_tokens=8192,
+            )
 
     def test_create_client_provider_not_available(self):
         """Test client creation when provider package is not available."""
@@ -262,7 +259,9 @@ class TestConfigBasedClientCreation:
         )
 
         with patch.dict(os.environ, {GEMINI_API_KEY_ENV: "test-key"}):
-            with patch("spegel.llm.gemini_available", return_value=False):
+            # Mock Gemini as unavailable using dynamic system
+            with patch("spegel.llm.ProviderRegistry.is_provider_available") as mock_available:
+                mock_available.side_effect = lambda provider: provider != "gemini"
                 client = create_client(ai_config)
                 assert client is None
 

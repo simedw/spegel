@@ -6,192 +6,126 @@ backwards compatibility with the existing codebase.
 
 from __future__ import annotations
 
+import importlib
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .base import LLMClient, enable_llm_logging, logger
+from .base import LLMClient, ProviderMeta, enable_llm_logging, logger
 
 if TYPE_CHECKING:
     from ..config import AI
 
-from .claude import DEFAULT_API_KEY_ENV as CLAUDE_API_KEY_ENV
-from .claude import DEFAULT_MODEL as CLAUDE_DEFAULT_MODEL
-from .gemini import DEFAULT_API_KEY_ENV as GEMINI_API_KEY_ENV
-from .gemini import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
-from .openai import DEFAULT_API_KEY_ENV as OPENAI_API_KEY_ENV
-from .openai import DEFAULT_MODEL as OPENAI_DEFAULT_MODEL
 
-try:
-    from .gemini import GeminiClient
-    from .gemini import is_available as gemini_available
+def _discover_providers() -> dict[str, ProviderMeta]:
+    providers = {}
+    llm_dir: Path = Path(__file__).parent
 
-except ImportError:
-    GeminiClient = None
+    for file in llm_dir.glob("*.py"):
+        if file.stem in ["__init__", "base"]:
+            continue
+        try:
+            module = importlib.import_module(f".{file.stem}", __package__)
+            if hasattr(module, "PROVIDER_META"):
+                provider_meta_class = module.PROVIDER_META
+                provider_meta_instance = provider_meta_class()
+                providers[provider_meta_instance.name] = provider_meta_instance
+        except (ImportError, AttributeError):
+            continue
 
-    def gemini_available() -> bool:
-        return False
-
-
-try:
-    from .openai import OpenAIClient
-    from .openai import is_available as openai_available
-except ImportError:
-    OpenAIClient = None
-
-    def openai_available() -> bool:
-        return False
+    return providers
 
 
-try:
-    from .claude import ClaudeClient
-    from .claude import is_available as claude_available
-except ImportError:
-    ClaudeClient = None
+class ProviderRegistry:
+    _providers: dict[str, ProviderMeta] = _discover_providers()
 
-    def claude_available() -> bool:
-        return False
+    @classmethod
+    def get_all_providers(cls) -> dict[str, ProviderMeta]:
+        return cls._providers.copy()
+
+    @classmethod
+    def get_provider_meta(cls, provider: str) -> ProviderMeta | None:
+        return cls._providers.get(provider.lower())
+
+    @classmethod
+    def is_provider_available(cls, provider: str) -> bool:
+        provider_meta = cls.get_provider_meta(provider)
+        return provider_meta.is_available() if provider_meta else False
+
+    @classmethod
+    def get_available_providers(cls) -> dict[str, bool]:
+        return {name: meta.is_available() for name, meta in cls._providers.items()}
+
+    @classmethod
+    def create_client_for_provider(cls, provider: str, api_key: str, **kwargs) -> LLMClient | None:
+        provider_meta: ProviderMeta | None = cls.get_provider_meta(provider)
+        if not provider_meta:
+            logger.error(f"Unknown provider: {provider}")
+            return None
+
+        if not cls.is_provider_available(provider):
+            logger.error(f"{provider.title()} provider requested but package not available")
+            return None
+
+        client_class = provider_meta.get_client_class()
+        if client_class is None:
+            logger.error(f"{provider.title()} provider requested but client class not available")
+            return None
+        return client_class(api_key=api_key, **kwargs)
 
 
 def create_client(ai_config: AI) -> LLMClient | None:
-    """Create an LLM client based on configuration.
-
-    Args:
-        ai_config: AI configuration from the app config
-
-    Returns:
-        LLMClient instance or None if no suitable provider is available
-    """
     api_key: str | None = os.getenv(ai_config.api_key_env)
     if not api_key:
         logger.warning(f"No API key found in environment variable: {ai_config.api_key_env}")
         return None
 
-    provider: str = ai_config.provider.lower()
-
-    match provider:
-        case "gemini":
-            if not gemini_available():
-                logger.error("Gemini provider requested but google-genai package not available")
-                return None
-            if GeminiClient is None:
-                logger.error("Gemini provider requested but GeminiClient not available")
-                return None
-
-            return GeminiClient(
-                api_key=api_key,
-                model=ai_config.model,
-                temperature=ai_config.temperature,
-                max_tokens=ai_config.max_tokens,
-            )
-
-        case "openai":
-            if not openai_available():
-                logger.error("OpenAI provider requested but openai package not available")
-                return None
-            if OpenAIClient is None:
-                logger.error("OpenAI provider requested but OpenAIClient not available")
-                return None
-
-            return OpenAIClient(
-                api_key=api_key,
-                model=ai_config.model,
-                temperature=ai_config.temperature,
-                max_tokens=ai_config.max_tokens,
-            )
-
-        case "claude":
-            if not claude_available():
-                logger.error("Claude provider requested but anthropic package not available")
-                return None
-            if ClaudeClient is None:
-                logger.error("Claude provider requested but ClaudeClient not available")
-                return None
-
-            return ClaudeClient(
-                api_key=api_key,
-                model=ai_config.model,
-                temperature=ai_config.temperature,
-                max_tokens=ai_config.max_tokens,
-            )
-
-        case _:
-            logger.error(f"Unknown AI provider: {provider}")
-            return None
+    return ProviderRegistry.create_client_for_provider(
+        provider=ai_config.provider,
+        api_key=api_key,
+        model=ai_config.model,
+        temperature=ai_config.temperature,
+        max_tokens=ai_config.max_tokens,
+    )
 
 
 def get_default_client() -> LLMClient | None:
-    """Legacy function for backwards compatibility.
-
-    This maintains compatibility with existing code while allowing
-    for future migration to config-based client creation.
-
-    Returns:
-        LLMClient instance or None if no suitable provider is available
-    """
-
-    api_key: str | None = os.getenv(GEMINI_API_KEY_ENV)
-    if api_key and gemini_available() and GeminiClient is not None:
-        return GeminiClient(api_key=api_key)
-
-    api_key: str | None = os.getenv(OPENAI_API_KEY_ENV)
-    if api_key and openai_available() and OpenAIClient is not None:
-        return OpenAIClient(api_key=api_key)
-
-    api_key = os.getenv(CLAUDE_API_KEY_ENV)
-    if api_key and claude_available() and ClaudeClient is not None:
-        return ClaudeClient(api_key=api_key)
-
+    for provider_name, provider_meta in ProviderRegistry.get_all_providers().items():
+        api_key: str | None = os.getenv(provider_meta.api_key_env)
+        if api_key and ProviderRegistry.is_provider_available(provider=provider_name):
+            return ProviderRegistry.create_client_for_provider(provider=provider_name, api_key=api_key)
     return None
 
 
 def list_available_providers() -> dict[str, bool]:
-    """Return a dict of provider names and their availability status."""
-    return {
-        "gemini": gemini_available(),
-        "openai": openai_available(),
-        "claude": claude_available(),
-    }
+    return ProviderRegistry.get_available_providers()
 
 
 def get_default_model_for_provider(provider: str) -> str:
-    """Get the default model name for a given provider."""
-    defaults: dict[str, str] = {
-        "gemini": GEMINI_DEFAULT_MODEL,
-        "openai": OPENAI_DEFAULT_MODEL,
-        "claude": CLAUDE_DEFAULT_MODEL,
-    }
-    return defaults.get(provider.lower(), "")
+    provider_meta: ProviderMeta | None = ProviderRegistry.get_provider_meta(provider)
+    return provider_meta.default_model if provider_meta else ""
 
 
 def get_default_api_key_env_for_provider(provider: str) -> str:
-    """Get the default environment variable name for a given provider's API key."""
-    defaults: dict[str, str] = {
-        "gemini": GEMINI_API_KEY_ENV,
-        "openai": OPENAI_API_KEY_ENV,
-        "claude": CLAUDE_API_KEY_ENV,
-    }
-    return defaults.get(provider.lower(), "")
+    provider_meta: ProviderMeta | None = ProviderRegistry.get_provider_meta(provider)
+    return provider_meta.api_key_env if provider_meta else ""
 
 
-# Export client classes for backwards compatibility (if available)
-# This allows tests to import them directly from spegel.llm
-if GeminiClient is not None:
-    globals()["GeminiClient"] = GeminiClient
-if OpenAIClient is not None:
-    globals()["OpenAIClient"] = OpenAIClient
-if ClaudeClient is not None:
-    globals()["ClaudeClient"] = ClaudeClient
+def get_defaults() -> ProviderMeta:
+    for provider_meta in ProviderRegistry.get_all_providers().values():
+        if provider_meta.is_available():
+            return provider_meta
+    raise RuntimeError("No available LLM providers found. Please install the required packages.")
 
 
 __all__ = [
     "LLMClient",
-    "GeminiClient",
-    "OpenAIClient",
-    "ClaudeClient",
+    "ProviderMeta",
     "create_client",
     "get_default_client",
     "enable_llm_logging",
     "list_available_providers",
     "get_default_model_for_provider",
     "get_default_api_key_env_for_provider",
+    "get_defaults",
 ]

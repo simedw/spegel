@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
-from .base import LLMClient
+from .base import LLMClient, ProviderMeta
 
 try:
     from google import genai
@@ -91,3 +91,20 @@ class GeminiClient(LLMClient):
 def is_available() -> bool:
     """Check if Gemini provider is available."""
     return GEMINI_AVAILABLE
+
+
+class GeminiProviderMeta(ProviderMeta):
+    name: str = "gemini"
+    default_model: str = DEFAULT_MODEL
+    api_key_env: str = DEFAULT_API_KEY_ENV
+
+    @classmethod
+    def is_available(cls) -> bool:
+        return is_available()
+
+    @classmethod
+    def get_client_class(cls):
+        return GeminiClient if GEMINI_AVAILABLE else None
+
+
+PROVIDER_META = GeminiProviderMeta

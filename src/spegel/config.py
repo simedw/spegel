@@ -14,15 +14,30 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from spegel.llm.base import ProviderMeta
+
+from .llm import get_defaults
+from .llm import list_available_providers as list_providers
+
+_defs: ProviderMeta = get_defaults()
+
 
 class AI(BaseModel):
     """AI provider configuration."""
 
-    provider: str = Field(default="gemini", description="AI provider: 'gemini' or 'openai'")
-    model: str = Field(default="gemini-2.5-flash-lite-preview-06-17", description="Model name for the provider")
-    api_key_env: str = Field(default="GEMINI_API_KEY", description="Environment variable name for the API key")
+    provider: str = Field(default=_defs.name, description=f"AI provider: {', '.join(list_providers().keys())}")
+    model: str = Field(default=_defs.default_model, description="Model name for the provider")
+    api_key_env: str = Field(default=_defs.api_key_env, description="Environment variable name for the API key")
     temperature: float = Field(default=0.2, ge=0.0, le=2.0, description="Temperature for generation")
     max_tokens: int = Field(default=8192, gt=0, description="Maximum output tokens")
+
+    @model_validator(mode="after")
+    def validate_provider(cls, values):
+        """Ensure the provider is one of the supported options."""
+        valid_providers: set[str] = set(list_providers().keys())
+        if values.provider not in valid_providers:
+            raise ValueError(f"Invalid provider '{values.provider}'. Must be one of {valid_providers}.")
+        return values
 
 
 class View(BaseModel):
@@ -72,9 +87,9 @@ class FullConfig(BaseModel):
 
 DEFAULT_CONFIG_DICT: dict[str, Any] = {
     "ai": {
-        "provider": "gemini",
-        "model": "gemini-2.5-flash-lite-preview-06-17",
-        "api_key_env": "GEMINI_API_KEY",
+        "provider": _defs.name,
+        "model": _defs.default_model,
+        "api_key_env": _defs.api_key_env,
         "temperature": 0.2,
         "max_tokens": 8192,
     },

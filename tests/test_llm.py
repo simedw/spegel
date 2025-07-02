@@ -20,8 +20,10 @@ class TestLLMIntegration:
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
             with patch("spegel.llm.openai.AsyncOpenAI") as mock_openai:
                 mock_openai.return_value = Mock()
-                # Mock Gemini as unavailable
-                with patch("spegel.llm.gemini_available", return_value=False):
+                # Mock Gemini as unavailable using dynamic system
+                with patch("spegel.llm.ProviderRegistry.is_provider_available") as mock_available:
+                    # Make only OpenAI available
+                    mock_available.side_effect = lambda provider: provider == "openai"
                     client = get_default_client()
 
                     from spegel.llm.openai import OpenAIClient
@@ -33,25 +35,23 @@ class TestLLMIntegration:
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=True):
             with patch("spegel.llm.claude.AsyncAnthropic") as mock_anthropic:
                 mock_anthropic.return_value = Mock()
-                # Mock other providers as unavailable
-                with patch("spegel.llm.gemini_available", return_value=False):
-                    with patch("spegel.llm.openai_available", return_value=False):
-                        client = get_default_client()
+                # Mock other providers as unavailable using dynamic system
+                with patch("spegel.llm.ProviderRegistry.is_provider_available") as mock_available:
+                    # Make only Claude available
+                    mock_available.side_effect = lambda provider: provider == "claude"
+                    client = get_default_client()
 
-                        from spegel.llm.claude import ClaudeClient
+                    from spegel.llm.claude import ClaudeClient
 
-                        assert isinstance(client, ClaudeClient)
+                    assert isinstance(client, ClaudeClient)
 
     def test_get_default_client_no_providers_available(self):
         """When API keys are set but no providers are available, should return None."""
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
-            with patch("spegel.llm.gemini_available", return_value=False):
-                with patch("spegel.llm.GeminiClient", None):
-                    # Should try other providers, but if none are available, return None
-                    with patch("spegel.llm.openai_available", return_value=False):
-                        with patch("spegel.llm.claude_available", return_value=False):
-                            client = get_default_client()
-                            assert client is None
+            # Mock all providers as unavailable using dynamic system
+            with patch("spegel.llm.ProviderRegistry.is_provider_available", return_value=False):
+                client = get_default_client()
+                assert client is None
 
 
 class TestProviderCompatibility:

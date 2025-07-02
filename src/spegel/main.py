@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import asyncio
 import re
+from typing import cast
+from urllib.parse import urljoin
 
 from dotenv import load_dotenv
 from textual import on
@@ -24,34 +26,27 @@ from textual.widgets._tabs import Tab
 
 from spegel.llm import LLMClient
 
-# External modules
 from .config import View, load_config
 from .llm import create_client, get_default_client
 from .views import stream_view
 from .web import fetch_url as fetch_url_blocking
 from .web import html_to_markdown
 
-# Load environment variables
 load_dotenv()
 
 
 class HTMLContent(Markdown):
     """Widget to display parsed HTML content as Markdown."""
 
-    def __init__(self, content: str = "", **kwargs):
+    def __init__(self, content: str = "", **kwargs) -> None:
         super().__init__(content, **kwargs)
         self.can_focus = True
 
     def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
         """Handle link clicks to navigate within the browser instead of opening externally."""
-        # Get the main app instance and cast to our Spegel type
-        from typing import cast
-
         app: Spegel = cast("Spegel", self.app)
         if hasattr(app, "handle_internal_link_click"):
-            # Prevent default behavior (opening in external browser)
             event.prevent_default()
-            # Handle the link click within our browser
             app.handle_internal_link_click(event.href)
         else:
             # Fallback to default behavior if method not available
@@ -61,21 +56,21 @@ class HTMLContent(Markdown):
 class URLInput(Input):
     """Custom input widget for URLs."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(placeholder="Enter URL (e.g., https://example.com)", **kwargs)
 
 
 class PromptEditor(TextArea):
     """Text area for editing prompts."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
 
 class LinkManager:
     """Manages link extraction, navigation, and highlighting."""
 
-    def __init__(self, app):
+    def __init__(self, app) -> None:
         self.app = app
         self.current_links: list[tuple] = []  # List of (link_text, link_url, start_pos, end_pos) tuples
         self.current_link_index: int = -1  # Currently selected link index
@@ -187,8 +182,8 @@ class LinkManager:
 class ScrollManager:
     """Manages scroll position preservation during content updates."""
 
-    def __init__(self, app) -> None:
-        self.app = app
+    def __init__(self, app: "Spegel") -> None:
+        self.app: "Spegel" = app
 
     def update_content_preserve_scroll(self, content_widget, new_content: str) -> None:
         """Update content while preserving scroll position during streaming."""
@@ -281,7 +276,7 @@ class Spegel(App):
     }
     """
 
-    def __init__(self, initial_url: str | None = None, **kwargs):
+    def __init__(self, initial_url: str | None = None, **kwargs) -> None:
         # Load configuration first (before super().__init__)
         self.config = load_config()
 
@@ -528,9 +523,9 @@ class Spegel(App):
 
         # Handle the case where Textual adds prefixes to tab IDs
         if raw_tab_id.startswith("--content-tab-"):
-            tab_name = raw_tab_id.replace("--content-tab-", "")
+            tab_name: str = raw_tab_id.replace("--content-tab-", "")
         else:
-            tab_name = raw_tab_id
+            tab_name: str = raw_tab_id
 
         if tab_name in self.views:
             self.current_view = tab_name
@@ -578,7 +573,7 @@ class Spegel(App):
                 self.url_history = self.url_history[-50:]
 
         # Show loading in current view only
-        current_content_widget = self.query_one(f"#content-{self.current_view}", HTMLContent)
+        current_content_widget: HTMLContent = self.query_one(f"#content-{self.current_view}", HTMLContent)
         current_content_widget.update(f"Loading {url}...")
 
         # Reset view states
@@ -626,7 +621,7 @@ class Spegel(App):
         """Process a single view and update its tab name."""
         try:
             # Set immediate loading message in content
-            content_widget = self.query_one(f"#content-{view_id}", HTMLContent)
+            content_widget: HTMLContent = self.query_one(f"#content-{view_id}", HTMLContent)
             if view_id == "raw":
                 content_widget.update("## Loading content...\n\n*Please wait while the page is fetched and parsed.*")
             else:
@@ -700,7 +695,7 @@ class Spegel(App):
         if not self.raw_html:
             return
 
-        content_widget = self.query_one(f"#content-{view_id}", HTMLContent)
+        content_widget: HTMLContent = self.query_one(f"#content-{view_id}", HTMLContent)
 
         if view_id == "raw":
             # Raw view - just parse HTML normally
@@ -769,7 +764,6 @@ class Spegel(App):
 
     def _resolve_url(self, url: str) -> str:
         """Resolve a URL against the current page URL, handling relative URLs."""
-        from urllib.parse import urljoin
 
         if not url.startswith(("http://", "https://")):
             if self.current_url:
@@ -803,15 +797,9 @@ class Spegel(App):
         # Use call_later to avoid potential event loop issues
         self.call_later(lambda: self.run_async_task(self.fetch_and_display_url(href)))
 
-    def run_async_task(self, task):
+    def run_async_task(self, task) -> None:
         """Helper to run async tasks from sync context."""
-        import asyncio
-
-        if hasattr(asyncio, "create_task"):
-            asyncio.create_task(task)
-        else:
-            # Fallback for older Python versions
-            asyncio.ensure_future(task)
+        asyncio.create_task(task)
 
     # ---------------------------------
     # Dynamic Key Binding Setup
