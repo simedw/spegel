@@ -22,6 +22,11 @@ def fetch_url(url: str, timeout: int = 10) -> Optional[str]:
     try:
         resp = requests.get(url, headers=HEADERS, timeout=timeout)
         resp.raise_for_status()
+
+        # Handle encoding more robustly to fix Unicode issues, but only when Requests clearly does not know
+        if not resp.encoding or resp.encoding.lower() in ("iso-8859-1", "ascii"):
+            resp.encoding = resp.apparent_encoding
+
         return resp.text
     except requests.RequestException:
         return None
