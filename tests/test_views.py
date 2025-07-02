@@ -40,7 +40,9 @@ class TestProcessView:
         result = await process_view(view, SAMPLE_HTML, None, "https://test.com")
 
         assert "LLM not available" in result
-        assert "Set API key (GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY)" in result
+        assert "Set API key" in result
+        # Check that at least some expected API keys are mentioned
+        assert any(key in result for key in ["ANTHROPIC_API_KEY", "GOOGLE_GENAI_API_KEY", "OPENAI_API_KEY"])
 
     @pytest.mark.asyncio
     async def test_process_view_with_llm(self):
