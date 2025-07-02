@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import Any
 
 from .base import LLMClient
 
 try:
     from google import genai
+    from google.genai import types
     from google.genai.types import GenerateContentConfig, ThinkingConfig
 
     GEMINI_AVAILABLE = True
@@ -19,6 +19,7 @@ except ImportError:
     ThinkingConfig = None
 
 DEFAULT_MODEL = "gemini-2.5-flash-lite-preview-06-17"
+DEFAULT_API_KEY_ENV = "GOOGLE_GENAI_API_KEY"
 
 
 class GeminiClient(LLMClient):
@@ -52,7 +53,7 @@ class GeminiClient(LLMClient):
         self,
         prompt: str,
         content: str,
-        generation_config: Any = None,  # Use Any to avoid type issues when imports fail
+        generation_config: types.GenerateContentConfig | None = None,
         **kwargs,
     ) -> AsyncIterator[str]:
         """Stream response from Gemini."""

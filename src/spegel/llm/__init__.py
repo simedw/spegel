@@ -14,10 +14,17 @@ from .base import LLMClient, enable_llm_logging, logger
 if TYPE_CHECKING:
     from ..config import AI
 
+from .claude import DEFAULT_API_KEY_ENV as CLAUDE_API_KEY_ENV
+from .claude import DEFAULT_MODEL as CLAUDE_DEFAULT_MODEL
+from .gemini import DEFAULT_API_KEY_ENV as GEMINI_API_KEY_ENV
+from .gemini import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
+from .openai import DEFAULT_API_KEY_ENV as OPENAI_API_KEY_ENV
+from .openai import DEFAULT_MODEL as OPENAI_DEFAULT_MODEL
 
 try:
     from .gemini import GeminiClient
     from .gemini import is_available as gemini_available
+
 except ImportError:
     GeminiClient = None
 
@@ -122,15 +129,15 @@ def get_default_client() -> LLMClient | None:
         LLMClient instance or None if no suitable provider is available
     """
 
-    api_key: str | None = os.getenv("GEMINI_API_KEY")
+    api_key: str | None = os.getenv(GEMINI_API_KEY_ENV)
     if api_key and gemini_available() and GeminiClient is not None:
         return GeminiClient(api_key=api_key)
 
-    api_key: str | None = os.getenv("OPENAI_API_KEY")
+    api_key: str | None = os.getenv(OPENAI_API_KEY_ENV)
     if api_key and openai_available() and OpenAIClient is not None:
         return OpenAIClient(api_key=api_key)
 
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    api_key = os.getenv(CLAUDE_API_KEY_ENV)
     if api_key and claude_available() and ClaudeClient is not None:
         return ClaudeClient(api_key=api_key)
 
@@ -149,9 +156,9 @@ def list_available_providers() -> dict[str, bool]:
 def get_default_model_for_provider(provider: str) -> str:
     """Get the default model name for a given provider."""
     defaults: dict[str, str] = {
-        "gemini": "gemini-2.5-flash-lite-preview-06-17",
-        "openai": "gpt-4.1-nano",
-        "claude": "claude-3-haiku-20240307",
+        "gemini": GEMINI_DEFAULT_MODEL,
+        "openai": OPENAI_DEFAULT_MODEL,
+        "claude": CLAUDE_DEFAULT_MODEL,
     }
     return defaults.get(provider.lower(), "")
 
@@ -159,9 +166,9 @@ def get_default_model_for_provider(provider: str) -> str:
 def get_default_api_key_env_for_provider(provider: str) -> str:
     """Get the default environment variable name for a given provider's API key."""
     defaults: dict[str, str] = {
-        "gemini": "GEMINI_API_KEY",
-        "openai": "OPENAI_API_KEY",
-        "claude": "ANTHROPIC_API_KEY",
+        "gemini": GEMINI_API_KEY_ENV,
+        "openai": OPENAI_API_KEY_ENV,
+        "claude": CLAUDE_API_KEY_ENV,
     }
     return defaults.get(provider.lower(), "")
 

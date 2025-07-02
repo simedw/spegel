@@ -15,6 +15,7 @@ except ImportError:
     AsyncAnthropic = None
 
 DEFAULT_MODEL = "claude-3-5-haiku-20241022"
+DEFAULT_API_KEY_ENV = "ANTHROPIC_API_KEY"
 
 
 class ClaudeClient(LLMClient):
@@ -46,15 +47,15 @@ class ClaudeClient(LLMClient):
         """Stream response from Claude."""
         # Build messages - Claude uses separate system and user messages
         messages = []
-        system_message = None
+        system_message: str | None = None
 
         if prompt and content:
             # Both prompt and content provided - prompt is system, content is user
             system_message = prompt
-            messages = [{"role": "user", "content": content}]
+            messages: list[dict[str, str]] = [{"role": "user", "content": content}]
         elif prompt and not content:
             # Only prompt provided - treat as user message
-            messages = [{"role": "user", "content": prompt}]
+            messages: list[dict[str, str]] = [{"role": "user", "content": prompt}]
 
         self._log_request(prompt, content)
 
@@ -68,11 +69,9 @@ class ClaudeClient(LLMClient):
                 **kwargs,
             }
 
-            # Add system message if we have one
             if system_message:
                 create_args["system"] = system_message
 
-            # Create streaming response
             stream = await self._client.messages.create(**create_args)
 
             collected: list[str] = []
@@ -81,7 +80,6 @@ class ClaudeClient(LLMClient):
                 if chunk.type == "content_block_delta" and hasattr(chunk, "delta"):
                     if hasattr(chunk.delta, "text") and chunk.delta.text:
                         text = chunk.delta.text
-                        # Ensure we have a string (not Mock object in tests)
                         if isinstance(text, str):
                             collected.append(text)
                             yield text

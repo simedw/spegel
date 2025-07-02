@@ -21,6 +21,7 @@ except ImportError:
         ChatCompletionMessageParam = None
 
 DEFAULT_MODEL = "gpt-4.1-nano"
+DEFAULT_API_KEY_ENV = "OPENAI_API_KEY"
 
 
 class OpenAIClient(LLMClient):

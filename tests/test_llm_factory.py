@@ -13,6 +13,9 @@ from spegel.llm import (
     get_default_model_for_provider,
     list_available_providers,
 )
+from spegel.llm.claude import DEFAULT_API_KEY_ENV as CLAUDE_API_KEY_ENV
+from spegel.llm.gemini import DEFAULT_API_KEY_ENV as GEMINI_API_KEY_ENV
+from spegel.llm.openai import DEFAULT_API_KEY_ENV as OPENAI_API_KEY_ENV
 
 
 class TestLLMFactory:
@@ -26,8 +29,10 @@ class TestLLMFactory:
         assert isinstance(providers, dict)
         assert "gemini" in providers
         assert "openai" in providers
+        assert "claude" in providers
         assert isinstance(providers["gemini"], bool)
         assert isinstance(providers["openai"], bool)
+        assert isinstance(providers["claude"], bool)
 
     def test_get_default_model_for_provider(self):
         """Test getting default models for each provider."""
@@ -43,9 +48,16 @@ class TestLLMFactory:
         assert len(openai_model) > 0
         assert "gpt" in openai_model.lower()
 
+        # Test Claude
+        claude_model = get_default_model_for_provider("claude")
+        assert isinstance(claude_model, str)
+        assert len(claude_model) > 0
+        assert "claude" in claude_model.lower()
+
         # Test case insensitive
         assert get_default_model_for_provider("GEMINI") == get_default_model_for_provider("gemini")
         assert get_default_model_for_provider("OpenAI") == get_default_model_for_provider("openai")
+        assert get_default_model_for_provider("CLAUDE") == get_default_model_for_provider("claude")
 
         # Test unknown provider
         unknown_model = get_default_model_for_provider("unknown")
@@ -55,15 +67,20 @@ class TestLLMFactory:
         """Test getting default API key environment variable names."""
         # Test Gemini
         gemini_env = get_default_api_key_env_for_provider("gemini")
-        assert gemini_env == "GEMINI_API_KEY"
+        assert gemini_env == GEMINI_API_KEY_ENV
 
         # Test OpenAI
         openai_env = get_default_api_key_env_for_provider("openai")
-        assert openai_env == "OPENAI_API_KEY"
+        assert openai_env == OPENAI_API_KEY_ENV
+
+        # Test Claude
+        claude_env = get_default_api_key_env_for_provider("claude")
+        assert claude_env == CLAUDE_API_KEY_ENV
 
         # Test case insensitive
-        assert get_default_api_key_env_for_provider("GEMINI") == "GEMINI_API_KEY"
-        assert get_default_api_key_env_for_provider("OpenAI") == "OPENAI_API_KEY"
+        assert get_default_api_key_env_for_provider("GEMINI") == GEMINI_API_KEY_ENV
+        assert get_default_api_key_env_for_provider("OpenAI") == OPENAI_API_KEY_ENV
+        assert get_default_api_key_env_for_provider("Claude") == CLAUDE_API_KEY_ENV
 
         # Test unknown provider
         unknown_env = get_default_api_key_env_for_provider("unknown")
@@ -81,7 +98,14 @@ class TestLegacyGetDefaultClient:
 
     def test_get_default_client_prefers_gemini(self):
         """When both API keys are set, should prefer Gemini."""
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-key", "OPENAI_API_KEY": "openai-key"}):
+        with patch.dict(
+            os.environ,
+            {
+                GEMINI_API_KEY_ENV: "gemini-key",
+                OPENAI_API_KEY_ENV: "openai-key",
+                CLAUDE_API_KEY_ENV: "claude-key",
+            },
+        ):
             with patch("spegel.llm.gemini.genai") as mock_genai:
                 mock_genai.Client.return_value = Mock()
 
@@ -92,7 +116,7 @@ class TestLegacyGetDefaultClient:
 
     def test_get_default_client_falls_back_to_openai(self):
         """When only OpenAI key is set, should use OpenAI."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "openai-key"}, clear=True):
+        with patch.dict(os.environ, {OPENAI_API_KEY_ENV: "openai-key"}, clear=True):
             with patch("spegel.llm.openai.AsyncOpenAI") as mock_openai:
                 mock_openai.return_value = Mock()
 
@@ -101,13 +125,25 @@ class TestLegacyGetDefaultClient:
 
                 assert isinstance(client, OpenAIClient)
 
+    def test_get_default_client_falls_back_to_claude(self):
+        """When only Claude key is set, should use Claude."""
+        with patch.dict(os.environ, {CLAUDE_API_KEY_ENV: "claude-key"}, clear=True):
+            with patch("spegel.llm.claude.AsyncAnthropic") as mock_anthropic:
+                mock_anthropic.return_value = Mock()
+
+                client = get_default_client()
+                from spegel.llm.claude import ClaudeClient
+
+                assert isinstance(client, ClaudeClient)
+
     def test_get_default_client_no_providers_available(self):
         """When API keys are set but no providers are available, should return None."""
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {GEMINI_API_KEY_ENV: "test-key"}):
             with patch("spegel.llm.gemini_available", return_value=False):
                 with patch("spegel.llm.openai_available", return_value=False):
-                    client = get_default_client()
-                    assert client is None
+                    with patch("spegel.llm.claude_available", return_value=False):
+                        client = get_default_client()
+                        assert client is None
 
 
 class TestConfigBasedClientCreation:
@@ -120,12 +156,12 @@ class TestConfigBasedClientCreation:
         ai_config = AI(
             provider="gemini",
             model="gemini-2.5-flash-lite-preview-06-17",
-            api_key_env="GEMINI_API_KEY",
+            api_key_env=GEMINI_API_KEY_ENV,
             temperature=0.3,
             max_tokens=4096,
         )
 
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {GEMINI_API_KEY_ENV: "test-key"}):
             with patch("spegel.llm.gemini.genai") as mock_genai:
                 mock_genai.Client.return_value = Mock()
 
@@ -142,10 +178,10 @@ class TestConfigBasedClientCreation:
         from spegel.config import AI
 
         ai_config = AI(
-            provider="openai", model="gpt-4o-mini", api_key_env="OPENAI_API_KEY", temperature=0.1, max_tokens=2048
+            provider="openai", model="gpt-4o-mini", api_key_env=OPENAI_API_KEY_ENV, temperature=0.1, max_tokens=2048
         )
 
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {OPENAI_API_KEY_ENV: "test-key"}):
             with patch("spegel.llm.openai.AsyncOpenAI") as mock_openai:
                 mock_openai.return_value = Mock()
 
@@ -157,6 +193,30 @@ class TestConfigBasedClientCreation:
                 assert client.temperature == 0.1
                 assert client.max_tokens == 2048
 
+    def test_create_client_claude_success(self):
+        """Test successful Claude client creation via config."""
+        from spegel.config import AI
+
+        ai_config = AI(
+            provider="claude",
+            model="claude-3-haiku-20240307",
+            api_key_env=CLAUDE_API_KEY_ENV,
+            temperature=0.4,
+            max_tokens=3072,
+        )
+
+        with patch.dict(os.environ, {CLAUDE_API_KEY_ENV: "test-key"}):
+            with patch("spegel.llm.claude.AsyncAnthropic") as mock_anthropic:
+                mock_anthropic.return_value = Mock()
+
+                client = create_client(ai_config)
+                from spegel.llm.claude import ClaudeClient
+
+                assert isinstance(client, ClaudeClient)
+                assert client.model == "claude-3-haiku-20240307"
+                assert client.temperature == 0.4
+                assert client.max_tokens == 3072
+
     def test_create_client_missing_api_key(self):
         """Test client creation with missing API key."""
         from spegel.config import AI
@@ -164,7 +224,7 @@ class TestConfigBasedClientCreation:
         ai_config = AI(
             provider="gemini",
             model="gemini-2.5-flash-lite-preview-06-17",
-            api_key_env="GEMINI_API_KEY",
+            api_key_env=GEMINI_API_KEY_ENV,
             temperature=0.2,
             max_tokens=8192,
         )
@@ -196,12 +256,12 @@ class TestConfigBasedClientCreation:
         ai_config = AI(
             provider="gemini",
             model="gemini-2.5-flash-lite-preview-06-17",
-            api_key_env="GEMINI_API_KEY",
+            api_key_env=GEMINI_API_KEY_ENV,
             temperature=0.2,
             max_tokens=8192,
         )
 
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {GEMINI_API_KEY_ENV: "test-key"}):
             with patch("spegel.llm.gemini_available", return_value=False):
                 client = create_client(ai_config)
                 assert client is None
