@@ -92,16 +92,16 @@ def extract_clean_text(
     main_content = None
     content_selectors = [
         "main",
-        "article", 
+        "article",
         ".post-content",
-        ".entry-content", 
+        ".entry-content",
         ".content",
         "[role='main']",
         ".post",
         ".hrecipe",  # Recipe-specific
-        "[itemtype*='Recipe']"  # Schema.org Recipe markup
+        "[itemtype*='Recipe']",  # Schema.org Recipe markup
     ]
-    
+
     for selector in content_selectors:
         elements = soup.select(selector)
         if elements:
@@ -111,18 +111,23 @@ def extract_clean_text(
             if len(content_text) > 500:  # Substantial content
                 main_content = best_element
                 break
-    
+
     # 2️⃣ If we found main content, use that. Otherwise, clean the whole page more conservatively
     if main_content:
         # Work with just the main content area
         working_soup = BeautifulSoup(str(main_content), "lxml")
-        
+
         # Remove only the most obvious noise from within the content
         minimal_noise_selectors = [
-            "script", "style", "noscript", 
-            ".advertisement", ".ads", ".ad-container",
-            ".social-share", ".share-buttons",
-            "[aria-hidden='true']"
+            "script",
+            "style",
+            "noscript",
+            ".advertisement",
+            ".ads",
+            ".ad-container",
+            ".social-share",
+            ".share-buttons",
+            "[aria-hidden='true']",
         ]
         for sel in minimal_noise_selectors:
             for node in working_soup.select(sel):
@@ -130,16 +135,31 @@ def extract_clean_text(
     else:
         # Fallback: clean the whole page but be more conservative
         working_soup = soup
-        
-        # More targeted noise removal (avoid overly broad selectors)  
+
+        # More targeted noise removal (avoid overly broad selectors)
         conservative_noise_selectors = [
-            "script", "style", "noscript", "iframe", "embed", "object",
-            "nav", "header", "footer",
-            "[role='navigation']", "[role='banner']", "[role='contentinfo']",
+            "script",
+            "style",
+            "noscript",
+            "iframe",
+            "embed",
+            "object",
+            "nav",
+            "header",
+            "footer",
+            "[role='navigation']",
+            "[role='banner']",
+            "[role='contentinfo']",
             "[aria-hidden='true']",
-            ".advertisement", ".ads", ".ad-container", ".sidebar-ads",
-            ".social-share", ".share-buttons", ".social-media",
-            ".cookie-notice", ".newsletter-signup"
+            ".advertisement",
+            ".ads",
+            ".ad-container",
+            ".sidebar-ads",
+            ".social-share",
+            ".share-buttons",
+            ".social-media",
+            ".cookie-notice",
+            ".newsletter-signup",
         ]
         for sel in conservative_noise_selectors:
             for node in working_soup.select(sel):
@@ -201,10 +221,12 @@ def html_to_markdown(html: str, base_url: str | None = None) -> str:
 
         # 1) Remove angle brackets around URLs
         markdown_content = re.sub(r"\]\(<([^>]+)>\)", r"](\1)", markdown_content)
+
         # 2) Collapse whitespace inside URL parentheses which can appear when html2text wraps long links
         def _fix(m):
             url = re.sub(r"\s+", "", m.group(1))
             return f"]({url})"
+
         markdown_content = re.sub(r"\]\(([^)]+)\)", _fix, markdown_content)
 
         soup = BeautifulSoup(html, "lxml")
@@ -221,7 +243,9 @@ if __name__ == "__main__":
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(description="Fetch a URL and print Spegel's cleaned text representation.")
+    parser = argparse.ArgumentParser(
+        description="Fetch a URL and print Spegel's cleaned text representation."
+    )
     parser.add_argument("url", help="URL to fetch")
     args = parser.parse_args()
 
@@ -230,4 +254,4 @@ if __name__ == "__main__":
         print("Error: Failed to fetch URL", file=sys.stderr)
         sys.exit(1)
 
-    print(extract_clean_text(html, args.url)) 
+    print(extract_clean_text(html, args.url))

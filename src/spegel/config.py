@@ -99,7 +99,7 @@ DEFAULT_CONFIG_DICT: Dict[str, Any] = {
             "description": "Terminal-optimized markdown for efficient browsing",
             "icon": "💻",
             "prompt": "Transform this webpage into the perfect terminal browsing experience! ...",
-        }
+        },
     ],
 }
 
@@ -108,11 +108,7 @@ def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any
     """Recursively merge two dicts (override wins)."""
     result = base.copy()
     for key, value in override.items():
-        if (
-            key in result
-            and isinstance(result[key], dict)
-            and isinstance(value, dict)
-        ):
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
             result[key] = _deep_merge(result[key], value)
         elif key == "views" and isinstance(value, list):
             # Special handling for views: if custom config provides views, replace defaults entirely
@@ -150,9 +146,9 @@ def load_config() -> FullConfig:
             except Exception as exc:
                 print(f"⚠️  Failed to load config from {path}: {exc}")
                 continue  # Try the next config file if this one fails
-                
+
     try:
         return FullConfig.model_validate(merged)
     except Exception as exc:  # pragma: no cover
         print("👉 Falling back to default config due to validation error:", exc)
-        return FullConfig() 
+        return FullConfig()

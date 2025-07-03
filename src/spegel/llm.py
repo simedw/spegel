@@ -14,14 +14,18 @@ interface allows us to add more providers later without touching UI code.
 logger = logging.getLogger("spegel.llm")
 logger.setLevel(logging.CRITICAL + 1)  # Effectively disabled by default
 
+
 def enable_llm_logging(level: int = logging.INFO) -> None:
     """Enable LLM interaction logging at the specified level."""
     logger.setLevel(level)
     if not logger.handlers:
         handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
+
 
 try:
     from google import genai
@@ -42,13 +46,15 @@ class LLMClient:
     async def stream(self, prompt: str, content: str, **kwargs) -> AsyncIterator[str]:
         """Yield chunks of markdown text."""
         raise NotImplementedError
-        yield # This is unreachable, but makes this an async generator
+        yield  # This is unreachable, but makes this an async generator
 
 
 class GeminiClient(LLMClient):
     """Wrapper around google-genai async streaming API."""
 
-    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash-lite-preview-06-17"):
+    def __init__(
+        self, api_key: str, model_name: str = "gemini-2.5-flash-lite-preview-06-17"
+    ):
         if genai is None:
             raise RuntimeError("google-genai not installed but GeminiClient requested")
         self._client = genai.Client(api_key=api_key)
@@ -63,11 +69,11 @@ class GeminiClient(LLMClient):
         if generation_config is None:
             generation_config = types.GenerateContentConfig(
                 temperature=0.2,
-                max_output_tokens =8192,
+                max_output_tokens=8192,
                 response_mime_type="text/plain",
-                thinking_config = types.ThinkingConfig(
-            thinking_budget=0,
-        )
+                thinking_config=types.ThinkingConfig(
+                    thinking_budget=0,
+                ),
             )
         user_content = f"{prompt}\n\n{content}" if content else prompt
         stream = self._client.aio.models.generate_content_stream(
@@ -121,13 +127,16 @@ if __name__ == "__main__":
 
     client, ok = get_default_client()
     if not ok or client is None:
-        print("Error: GEMINI_API_KEY not set or google-genai unavailable", file=sys.stderr)
+        print(
+            "Error: GEMINI_API_KEY not set or google-genai unavailable", file=sys.stderr
+        )
         sys.exit(1)
 
     async def _main() -> None:
         async for chunk in client.stream(args.prompt, ""):
             print(chunk, end="", flush=True)
+
     try:
         asyncio.run(_main())
     except KeyboardInterrupt:
-        pass 
+        pass

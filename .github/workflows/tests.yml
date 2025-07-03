@@ -26,6 +26,10 @@ jobs:
       run: |
         uv sync --all-extras
     
+    - name: Check code formatting with ruff
+      run: |
+        uv run ruff format --check
+    
     - name: Run tests
       run: |
         uv run pytest

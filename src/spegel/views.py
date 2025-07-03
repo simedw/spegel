@@ -79,4 +79,4 @@ async def stream_view(
             yield line + "\n"
 
     if buffer:
-        yield buffer 
+        yield buffer
