@@ -5,6 +5,27 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+    
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras
+    
+    - name: Check code formatting with ruff
+      run: |
+        uv run ruff format --check
+    
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -25,10 +46,6 @@ jobs:
     - name: Install dependencies
       run: |
         uv sync --all-extras
-    
-    - name: Check code formatting with ruff
-      run: |
-        uv run ruff format --check
     
     - name: Run tests
       run: |
