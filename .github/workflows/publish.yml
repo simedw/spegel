@@ -1,11 +1,9 @@
 name: Build and Publish to PyPI
 
 on:
-  push:
-    tags:
-      - 'v*'  # Triggers on version tags like v1.0.0, v0.1.0, etc.
   release:
     types: [published]
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   test:
