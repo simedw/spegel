@@ -9,3 +9,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Configuration files
+.spegel.toml
