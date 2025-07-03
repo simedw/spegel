@@ -72,9 +72,7 @@ class TestScrollManager:
         state = self.scroll_manager._capture_scroll_state(self.mock_content_widget)
 
         assert state["scroll_y"] == 0
-        assert (
-            state["is_at_bottom"]
-        )  # Considered at bottom when no scroll needed
+        assert state["is_at_bottom"]  # Considered at bottom when no scroll needed
 
     def test_restore_scroll_if_needed_at_bottom(self):
         """Test that scroll is not restored when user was at bottom."""

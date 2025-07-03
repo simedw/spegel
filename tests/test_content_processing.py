@@ -181,9 +181,7 @@ class TestViewProcessing:
     @pytest.mark.asyncio
     async def test_process_all_views_parallel_auto_load_only(self):
         """Test that only auto-load views are processed initially."""
-        with patch.object(
-            self.app, "_process_single_view", new_callable=AsyncMock
-        ):
+        with patch.object(self.app, "_process_single_view", new_callable=AsyncMock):
             # Mock asyncio.create_task to track what gets created
             created_tasks = []
             original_create_task = asyncio.create_task
