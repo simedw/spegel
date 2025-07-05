@@ -11,6 +11,15 @@ app_title = "Spegel"         # Application title
 show_icons = true            # Show emoji icons in tabs
 compact_mode = false         # Smaller UI elements
 
+# LLM Provider Configuration
+[llm]
+provider = "gemini"          # "gemini" or "bedrock"
+
+# Bedrock settings  
+bedrock_region = "us-east-1"
+bedrock_profile = null       # AWS profile name (optional)
+bedrock_model = null         # Model: claude-3-haiku, claude-3-sonnet, claude-3-5-sonnet, etc. (required for bedrock)
+
 # View definitions - order determines tab sequence and hotkey numbers
 [[views]]
 id = "raw"

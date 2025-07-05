@@ -43,6 +43,13 @@ class View(BaseModel):
         return values
 
 
+class LLM(BaseModel):
+    provider: str = "gemini"  # "gemini" or "bedrock"
+    bedrock_region: str = "us-east-1"
+    bedrock_profile: str | None = None
+    bedrock_model: str | None = None
+
+
 class Settings(BaseModel):
     default_view: str = "terminal"
     max_history: int = 50
@@ -58,6 +65,7 @@ class UI(BaseModel):
 class FullConfig(BaseModel):
     settings: Settings = Settings()
     ui: UI = UI()
+    llm: LLM = LLM()
     views: List[View] = Field(default_factory=list)
 
     def view_map(self) -> Dict[str, View]:
@@ -77,6 +85,12 @@ DEFAULT_CONFIG_DICT: Dict[str, Any] = {
         "app_title": "Spegel",
     },
     "ui": {"show_icons": True, "compact_mode": False},
+    "llm": {
+        "provider": "gemini",
+        "bedrock_region": "us-east-1",
+        "bedrock_profile": None,
+        "bedrock_model": None,
+    },
     "views": [
         {
             "id": "raw",

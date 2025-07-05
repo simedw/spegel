@@ -29,10 +29,32 @@ $ pip install -e .
 ```
 
 ## API Keys
-Spegel is currently only support Gemini 2.5 Flash, to use it you need to provide your API key in the env
+Spegel supports multiple AI providers:
 
+### Gemini (Default)
+```bash
+export GEMINI_API_KEY=your_gemini_api_key
 ```
-GEMINI_API_KEY=...
+
+### Amazon Bedrock
+```bash
+# Set up AWS credentials (choose one method)
+aws configure
+# OR
+export AWS_ACCESS_KEY_ID=your_access_key
+export AWS_SECRET_ACCESS_KEY=your_secret_key
+export AWS_DEFAULT_REGION=us-east-1
+
+# Enable Bedrock by setting a model (no BEDROCK_ENABLED needed)
+export BEDROCK_MODEL=claude-3-5-sonnet
+```
+
+You can also configure the provider in your `.spegel.toml`:
+```toml
+[llm]
+provider = "bedrock"
+bedrock_region = "us-east-1"
+bedrock_model = "claude-3-5-sonnet"
 ```
 
 

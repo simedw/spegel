@@ -71,12 +71,12 @@ class PromptEditor(TextArea):
 
 class LinkManager:
     """Manages link extraction, navigation, and highlighting."""
-    
+
     def __init__(self, app):
         self.app = app
         self.current_links: List[tuple] = []  # List of (link_text, link_url, start_pos, end_pos) tuples
         self.current_link_index: int = -1  # Currently selected link index
-    
+
     def extract_links_from_markdown(self, content: str) -> List[tuple]:
         """Extract all links from markdown content with position tracking."""
         # Regex to match markdown links: [text](url) - including angle brackets from html2text
@@ -110,14 +110,14 @@ class LinkManager:
             clean_links.append((text, url, start_pos, end_pos))
 
         return clean_links
-    
+
     def update_links(self, content: str, view_id: str) -> None:
         """Update current links if viewing the specified view."""
         links = self.extract_links_from_markdown(content)
         if self.app.current_view == view_id:
             self.current_links = links
             self.current_link_index = -1  # Reset selection
-    
+
     def navigate_next_link(self) -> None:
         """Navigate to the next link."""
         if not self.current_links:
@@ -140,10 +140,10 @@ class LinkManager:
 
         link_text, link_url, _, _ = self.current_links[self.current_link_index]
         link_url = self.app._resolve_url(link_url)
-        
+
         self.app.notify(f"Opening: {self._escape_markup(link_text)}")
         await self.app.fetch_and_display_url(link_url)
-    
+
     def highlight_current_link(self, content: str) -> str:
         """Add highlighting to the currently selected link using position-based replacement."""
         if self.current_link_index < 0 or self.current_link_index >= len(self.current_links):
@@ -161,7 +161,7 @@ class LinkManager:
         after = content[end_pos:]
 
         return before + highlighted_link + after
-    
+
     def _update_current_view_with_highlight(self) -> None:
         """Update the current view content with link highlighting."""
         if self.app.current_view not in self.app.original_content:
@@ -175,7 +175,7 @@ class LinkManager:
             content_widget.update(highlighted)
         except Exception:
             pass
-    
+
     def _escape_markup(self, text: str) -> str:
         """Escape markup characters for safe display in notifications."""
         return text.replace("[", "\\[").replace("]", "\\]").replace("!", "\\!")
@@ -183,10 +183,10 @@ class LinkManager:
 
 class ScrollManager:
     """Manages scroll position preservation during content updates."""
-    
+
     def __init__(self, app):
         self.app = app
-    
+
     def update_content_preserve_scroll(self, content_widget, new_content: str) -> None:
         """Update content while preserving scroll position during streaming."""
         try:
@@ -196,21 +196,21 @@ class ScrollManager:
         except Exception:
             # Fallback to regular update if scroll preservation fails
             content_widget.update(new_content)
-    
+
     def _capture_scroll_state(self, content_widget) -> dict:
         """Capture current scroll state for later restoration."""
         scroll_y = content_widget.scroll_y
         max_scroll_y = content_widget.max_scroll_y
-        
+
         # Check if user is at the bottom (within a small threshold)
         # If they are, we'll allow auto-scroll to continue
         is_at_bottom = (max_scroll_y == 0) or (scroll_y >= max_scroll_y - 2)
-        
+
         return {
             "scroll_y": scroll_y,
             "is_at_bottom": is_at_bottom
         }
-    
+
     def _restore_scroll_if_needed(self, content_widget, scroll_state: dict) -> None:
         """Restore scroll position if user was not at bottom."""
         if not scroll_state["is_at_bottom"]:
@@ -218,7 +218,7 @@ class ScrollManager:
             self.app.call_after_refresh(
                 lambda: self._restore_scroll_position(content_widget, scroll_state["scroll_y"])
             )
-    
+
     def _restore_scroll_position(self, content_widget, target_scroll_y: int) -> None:
         """Restore scroll position after content update."""
         try:
@@ -232,7 +232,7 @@ class ScrollManager:
 
 class Spegel(App):
     """A terminal-based browser with LLM capabilities."""
-    
+
     CSS = """
     #url-input {
         dock: bottom;
@@ -240,43 +240,43 @@ class Spegel(App):
         border: solid $primary;
         display: none;
     }
-    
+
     #prompt-editor-container {
         dock: bottom;
         height: 10;
         border: solid $warning;
         display: none;
     }
-    
+
     #content-container {
         height: 1fr;
     }
-    
+
     .url-input-visible #url-input {
         display: block;
     }
-    
+
     .url-input-visible #content-container {
         margin-bottom: 3;
     }
-    
+
     .prompt-editor-visible #prompt-editor-container {
         display: block;
     }
-    
+
     .prompt-editor-visible #content-container {
         margin-bottom: 10;
     }
-    
+
     TabbedContent {
         height: 1fr;
     }
-    
+
     TabPane {
         padding: 1;
         height: 1fr;
     }
-    
+
     HTMLContent {
         height: 1fr;
         scrollbar-gutter: stable;
@@ -310,8 +310,8 @@ class Spegel(App):
         self.url_history: List[str] = []  # History of visited URLs for back navigation
 
         # Initialize LLM client via abstraction layer
-        self.llm_client, self.llm_available = get_default_client()
-        
+        self.llm_client, self.llm_available = get_default_client(self.config)
+
         # Initialize managers
         self.scroll_manager = ScrollManager(self)
         self.link_manager = LinkManager(self)
@@ -325,7 +325,7 @@ class Spegel(App):
             with TabbedContent(initial=self.current_view):
                 # Create tabs in the order specified in config
                 sorted_views = sorted(self.views.items(), key=lambda x: x[1].order)
-                
+
                 for view_id, view_config in sorted_views:
                     with TabPane(view_config.name, id=view_id):
                         # Remove ScrollableContainer to fix double scrollbar issue
@@ -527,7 +527,7 @@ class Spegel(App):
                 await self.update_view_content(self.current_view)
 
             self.action_hide_overlays()
-            
+
         # Handle arrow keys for scrolling when not in overlays
         if not self.url_input_visible and not self.prompt_editor_visible:
             if event.key == "up":
@@ -545,26 +545,26 @@ class Spegel(App):
         # Extract the actual tab name from the event
         # The event.tab.id might be something like "--content-tab-actions", so we need to extract the real ID
         raw_tab_id = str(event.tab.id)
-        
+
         # Handle the case where Textual adds prefixes to tab IDs
         if raw_tab_id.startswith("--content-tab-"):
             tab_name = raw_tab_id.replace("--content-tab-", "")
         else:
             tab_name = raw_tab_id
-        
+
         if tab_name in self.views:
             self.current_view = tab_name
 
             # Check if this view needs to be loaded on-demand
             view_config = self.views[tab_name]
-            
+
             needs_loading = (
                 self.raw_html and  # We have content to process
                 tab_name not in self.views_loaded and  # Not already loaded
                 tab_name not in self.views_loading and  # Not currently loading
                 not view_config.auto_load  # Not an auto-load view
             )
-            
+
             if needs_loading:
                 # Start loading this view on-demand
                 self.views_loading.add(tab_name)
@@ -635,17 +635,17 @@ class Spegel(App):
         """Process views in parallel, respecting auto_load settings."""
         # Only process auto-load views initially
         auto_load_views = [view_id for view_id, view in self.views.items() if view.auto_load]
-        
+
         # Mark auto-load views as loading first
         for view_id in auto_load_views:
             self.views_loading.add(view_id)
             self._update_tab_name(view_id)
-        
+
         # Start auto-load tasks in the background without waiting
         for view_id in auto_load_views:
             # Create task and let it run in background
             asyncio.create_task(self._process_single_view(view_id))
-        
+
         # Return immediately - don't wait for tasks to complete
 
     async def _process_single_view(self, view_id: str) -> None:
@@ -768,7 +768,7 @@ class Spegel(App):
             ):
                 running_content += chunk
                 chunk_count += 1
-                
+
                 # Throttle UI updates - only update every 3 chunks to avoid overwhelming Textual
                 if chunk_count % 3 == 0:
                     # Preserve scroll position during streaming updates
@@ -776,7 +776,7 @@ class Spegel(App):
 
             # Final update to ensure we show the complete content
             self.scroll_manager.update_content_preserve_scroll(content_widget, running_content)
-            
+
             self.original_content[view_id] = running_content
             self.link_manager.update_links(running_content, view_id)
 
@@ -805,7 +805,7 @@ class Spegel(App):
     def _resolve_url(self, url: str) -> str:
         """Resolve a URL against the current page URL, handling relative URLs."""
         from urllib.parse import urljoin
-        
+
         if not url.startswith(("http://", "https://")):
             if self.current_url:
                 # For all relative URLs (including root-relative /path), resolve against current URL

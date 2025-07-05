@@ -28,6 +28,7 @@ classifiers = [
 
 dependencies = [
     "beautifulsoup4>=4.13.4",
+    "boto3>=1.35.0",
     "google>=3.0.0",
     "google-genai>=1.20.0",
     "html2text>=2025.4.15",
@@ -62,6 +63,13 @@ dev = [
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 
 [dependency-groups]
 dev = [
