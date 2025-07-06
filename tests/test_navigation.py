@@ -154,7 +154,9 @@ class TestLinkManager:
         # Should resolve URL and navigate
         self.mock_app._resolve_url.assert_called_once_with("/relative")
         self.mock_app.notify.assert_called_once()
-        self.mock_app.fetch_and_display_url.assert_called_once_with("https://resolved.com")
+        self.mock_app.fetch_and_display_url.assert_called_once_with(
+            "https://resolved.com"
+        )
 
     @pytest.mark.asyncio
     async def test_open_current_link_no_selection(self):
@@ -168,7 +170,9 @@ class TestLinkManager:
         await self.link_manager.open_current_link()
 
         # Should show warning, not navigate
-        self.mock_app.notify.assert_called_once_with("No link selected", severity="warning")
+        self.mock_app.notify.assert_called_once_with(
+            "No link selected", severity="warning"
+        )
         self.mock_app.fetch_and_display_url.assert_not_called()
 
     def test_highlight_current_link(self):
@@ -274,8 +278,12 @@ class TestHistoryManagement:
     @pytest.mark.asyncio
     async def test_history_adds_new_urls(self):
         """Test that new URLs are added to history."""
-        with patch.object(self.app, "_process_all_views_parallel", new_callable=AsyncMock):
-            with patch("spegel.main.fetch_url_blocking", return_value="<html>Test</html>"):
+        with patch.object(
+            self.app, "_process_all_views_parallel", new_callable=AsyncMock
+        ):
+            with patch(
+                "spegel.main.fetch_url_blocking", return_value="<html>Test</html>"
+            ):
                 with patch.object(self.app, "query_one", return_value=Mock()):
                     await self.app.fetch_and_display_url("https://example.com")
                     await self.app.fetch_and_display_url("https://other.com")
@@ -289,11 +297,17 @@ class TestHistoryManagement:
     @pytest.mark.asyncio
     async def test_history_no_duplicate_consecutive(self):
         """Test that consecutive duplicate URLs are not added."""
-        with patch.object(self.app, "_process_all_views_parallel", new_callable=AsyncMock):
-            with patch("spegel.main.fetch_url_blocking", return_value="<html>Test</html>"):
+        with patch.object(
+            self.app, "_process_all_views_parallel", new_callable=AsyncMock
+        ):
+            with patch(
+                "spegel.main.fetch_url_blocking", return_value="<html>Test</html>"
+            ):
                 with patch.object(self.app, "query_one", return_value=Mock()):
                     await self.app.fetch_and_display_url("https://example.com")
-                    await self.app.fetch_and_display_url("https://example.com")  # Same URL
+                    await self.app.fetch_and_display_url(
+                        "https://example.com"
+                    )  # Same URL
 
                     assert len(self.app.url_history) == 1
                     assert self.app.url_history == ["https://example.com"]
@@ -301,8 +315,12 @@ class TestHistoryManagement:
     @pytest.mark.asyncio
     async def test_history_size_limit(self):
         """Test that history is limited to 50 entries."""
-        with patch.object(self.app, "_process_all_views_parallel", new_callable=AsyncMock):
-            with patch("spegel.main.fetch_url_blocking", return_value="<html>Test</html>"):
+        with patch.object(
+            self.app, "_process_all_views_parallel", new_callable=AsyncMock
+        ):
+            with patch(
+                "spegel.main.fetch_url_blocking", return_value="<html>Test</html>"
+            ):
                 with patch.object(self.app, "query_one", return_value=Mock()):
                     # Add 60 URLs to test size limit
                     for i in range(60):
@@ -319,7 +337,9 @@ class TestHistoryManagement:
         # Set up history
         self.app.url_history = ["https://first.com", "https://second.com"]
 
-        with patch.object(self.app, "fetch_and_display_url", new_callable=AsyncMock) as mock_fetch:
+        with patch.object(
+            self.app, "fetch_and_display_url", new_callable=AsyncMock
+        ) as mock_fetch:
             self.app.action_go_back()
 
             # Should navigate to previous URL
@@ -335,7 +355,9 @@ class TestHistoryManagement:
         self.app.action_go_back()
 
         # Should show warning message
-        self.app.notify.assert_called_once_with("No previous page to go back to", severity="warning", timeout=2)
+        self.app.notify.assert_called_once_with(
+            "No previous page to go back to", severity="warning", timeout=2
+        )
 
     def test_go_back_empty_history(self):
         """Test go back when history is empty."""
@@ -345,7 +367,9 @@ class TestHistoryManagement:
         self.app.action_go_back()
 
         # Should show warning message
-        self.app.notify.assert_called_once_with("No previous page to go back to", severity="warning", timeout=2)
+        self.app.notify.assert_called_once_with(
+            "No previous page to go back to", severity="warning", timeout=2
+        )
 
 
 class TestURLInputHandling:
@@ -371,7 +395,9 @@ class TestURLInputHandling:
         mock_event.value = "example.com"
 
         with patch.object(self.app, "action_hide_overlays") as mock_hide:
-            with patch.object(self.app, "fetch_and_display_url", new_callable=AsyncMock) as mock_fetch:
+            with patch.object(
+                self.app, "fetch_and_display_url", new_callable=AsyncMock
+            ) as mock_fetch:
                 await self.app.handle_url_submission(mock_event)
 
                 mock_hide.assert_called_once()
@@ -384,7 +410,9 @@ class TestURLInputHandling:
         mock_event.value = "http://example.com"
 
         with patch.object(self.app, "action_hide_overlays") as mock_hide:
-            with patch.object(self.app, "fetch_and_display_url", new_callable=AsyncMock) as mock_fetch:
+            with patch.object(
+                self.app, "fetch_and_display_url", new_callable=AsyncMock
+            ) as mock_fetch:
                 await self.app.handle_url_submission(mock_event)
 
                 mock_hide.assert_called_once()
@@ -396,7 +424,9 @@ class TestURLInputHandling:
         mock_event = Mock()
         mock_event.value = "   "  # Whitespace only
 
-        with patch.object(self.app, "fetch_and_display_url", new_callable=AsyncMock) as mock_fetch:
+        with patch.object(
+            self.app, "fetch_and_display_url", new_callable=AsyncMock
+        ) as mock_fetch:
             await self.app.handle_url_submission(mock_event)
 
             # Should not fetch anything

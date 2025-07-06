@@ -36,7 +36,11 @@ def test_extract_clean_text_link_cleanup():
 
 def test_extract_clean_text_truncation():
     """When max_chars is set, output should be truncated with marker."""
-    huge_html = "<html><head><title>Big</title></head><body>" + ("x" * 10_000) + "</body></html>"
+    huge_html = (
+        "<html><head><title>Big</title></head><body>"
+        + ("x" * 10_000)
+        + "</body></html>"
+    )
     md = extract_clean_text(huge_html, url="https://example.com", max_chars=100)
 
     assert md.endswith("...(truncated)")
@@ -49,7 +53,9 @@ class TestWebErrorScenarios:
 
     def test_html_to_markdown_malformed_html(self):
         """Test handling of malformed HTML."""
-        malformed_html = "<html><head><title>Test</head><body><p>Unclosed paragraph</body></html>"
+        malformed_html = (
+            "<html><head><title>Test</head><body><p>Unclosed paragraph</body></html>"
+        )
 
         # Should not raise exception and return some content
         result = html_to_markdown(malformed_html)
@@ -66,7 +72,9 @@ class TestWebErrorScenarios:
     def test_html_to_markdown_invalid_encoding(self):
         """Test handling of HTML with invalid characters."""
         # HTML with invalid UTF-8 sequences
-        html_with_invalid_chars = "<html><body>Valid text \udcff invalid char</body></html>"
+        html_with_invalid_chars = (
+            "<html><body>Valid text \udcff invalid char</body></html>"
+        )
 
         # Should handle gracefully without crashing
         result = html_to_markdown(html_with_invalid_chars)

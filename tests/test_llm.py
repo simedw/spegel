@@ -73,7 +73,9 @@ class TestGeminiClient:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
+            mock_client.aio.models.generate_content_stream = (
+                mock_generate_content_stream
+            )
 
             client = GeminiClient("test-key")
 
@@ -99,7 +101,9 @@ class TestGeminiClient:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
+            mock_client.aio.models.generate_content_stream = (
+                mock_generate_content_stream
+            )
 
             client = GeminiClient("test-key")
 
@@ -133,7 +137,9 @@ class TestGeminiClient:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
+            mock_client.aio.models.generate_content_stream = (
+                mock_generate_content_stream
+            )
 
             client = GeminiClient("test-key")
 
@@ -197,7 +203,9 @@ class TestLLMErrorScenarios:
             async def mock_generate_content_stream(*args, **kwargs):
                 raise Exception("Network error")
 
-            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
+            mock_client.aio.models.generate_content_stream = (
+                mock_generate_content_stream
+            )
 
             client = GeminiClient("test-key")
 
@@ -232,7 +240,9 @@ class TestLLMErrorScenarios:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
+            mock_client.aio.models.generate_content_stream = (
+                mock_generate_content_stream
+            )
 
             client = GeminiClient("test-key")
 
@@ -274,7 +284,9 @@ class TestLLMErrorScenarios:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
+            mock_client.aio.models.generate_content_stream = (
+                mock_generate_content_stream
+            )
 
             client = GeminiClient("test-key")
 
@@ -300,7 +312,9 @@ class TestLLMErrorScenarios:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
+            mock_client.aio.models.generate_content_stream = (
+                mock_generate_content_stream
+            )
 
             client = GeminiClient("test-key")
 
@@ -317,7 +331,9 @@ class TestLLMErrorScenarios:
             mock_genai.Client.return_value = mock_client
 
             # Mock logging to raise exception during client creation
-            with patch("spegel.llm.logger.info", side_effect=Exception("Logging failed")):
+            with patch(
+                "spegel.llm.logger.info", side_effect=Exception("Logging failed")
+            ):
                 # Should still create client despite logging errors
                 client = GeminiClient("test-key")
                 assert client._client == mock_client

@@ -23,7 +23,9 @@ class TestKeyboardNavigation:
 
                 # Mock managers
                 self.app.link_manager = Mock()
-                self.app.link_manager.current_links = [("Link1", "http://example.com", 0, 10)]
+                self.app.link_manager.current_links = [
+                    ("Link1", "http://example.com", 0, 10)
+                ]
                 self.app.link_manager.current_link_index = 0
 
     @pytest.mark.asyncio
@@ -298,7 +300,9 @@ class TestOverlayManagement:
         self.app.action_edit_prompt()
 
         # Should show warning
-        self.app.notify.assert_called_once_with("Raw view doesn't use prompts", severity="warning")
+        self.app.notify.assert_called_once_with(
+            "Raw view doesn't use prompts", severity="warning"
+        )
 
         # Should not show prompt editor
         assert not self.app.prompt_editor_visible
@@ -313,7 +317,9 @@ class TestOverlayManagement:
         self.app.action_edit_prompt()
 
         # Should show error
-        self.app.notify.assert_called_once_with("Invalid view: nonexistent", severity="error")
+        self.app.notify.assert_called_once_with(
+            "Invalid view: nonexistent", severity="error"
+        )
 
 
 class TestScrollActions:
@@ -461,15 +467,25 @@ class TestDynamicKeyBindings:
         self.app._setup_bindings()
 
         # Should bind essential keys
-        self.app.bind.assert_any_call("slash", "show_url_input", description="Open URL", show=True)
-        self.app.bind.assert_any_call("escape", "hide_overlays", description="Cancel", show=False)
-        self.app.bind.assert_any_call("e", "edit_prompt", description="Edit Prompt", show=True)
+        self.app.bind.assert_any_call(
+            "slash", "show_url_input", description="Open URL", show=True
+        )
+        self.app.bind.assert_any_call(
+            "escape", "hide_overlays", description="Cancel", show=False
+        )
+        self.app.bind.assert_any_call(
+            "e", "edit_prompt", description="Edit Prompt", show=True
+        )
         self.app.bind.assert_any_call("b", "go_back", description="Back", show=True)
         self.app.bind.assert_any_call("q", "quit", description="Quit", show=True)
 
         # Should bind view-specific hotkeys
-        self.app.bind.assert_any_call("s", "switch_tab('summary')", description="Summary", show=True)
-        self.app.bind.assert_any_call("a", "switch_tab('analysis')", description="Analysis", show=True)
+        self.app.bind.assert_any_call(
+            "s", "switch_tab('summary')", description="Summary", show=True
+        )
+        self.app.bind.assert_any_call(
+            "a", "switch_tab('analysis')", description="Analysis", show=True
+        )
 
     def test_setup_bindings_handles_duplicate_hotkeys(self):
         """Test handling of duplicate hotkey conflicts."""
@@ -493,7 +509,9 @@ class TestDynamicKeyBindings:
         self.app._setup_bindings()
 
         # Should notify about conflict
-        self.app.notify.assert_called_with("Hotkey 'q' already bound; skipping Conflict", severity="warning", timeout=3)
+        self.app.notify.assert_called_with(
+            "Hotkey 'q' already bound; skipping Conflict", severity="warning", timeout=3
+        )
 
     def test_setup_bindings_skips_disabled_views(self):
         """Test that disabled views don't get hotkey bindings."""
@@ -545,7 +563,9 @@ class TestInternalLinkHandling:
 
         # Should resolve URL and navigate
         self.app._resolve_url.assert_called_once_with("/relative-path")
-        self.app.notify.assert_called_once_with("Navigating to: https://example.com/resolved")
+        self.app.notify.assert_called_once_with(
+            "Navigating to: https://example.com/resolved"
+        )
         self.app.call_later.assert_called_once()
 
     def test_handle_internal_link_click_mailto(self):
@@ -557,7 +577,9 @@ class TestInternalLinkHandling:
 
         # Due to current implementation, mailto gets resolved to https://mailto:...
         # Should show navigation notification
-        self.app.notify.assert_called_once_with("Navigating to: https://mailto:test@example.com")
+        self.app.notify.assert_called_once_with(
+            "Navigating to: https://mailto:test@example.com"
+        )
         self.app.call_later.assert_called_once()
 
     def test_handle_internal_link_click_javascript(self):
@@ -569,7 +591,9 @@ class TestInternalLinkHandling:
 
         # Due to current implementation, javascript gets resolved to https://javascript:...
         # Should show navigation notification
-        self.app.notify.assert_called_once_with("Navigating to: https://javascript:alert('test')")
+        self.app.notify.assert_called_once_with(
+            "Navigating to: https://javascript:alert('test')"
+        )
         self.app.call_later.assert_called_once()
 
     def test_handle_internal_link_click_absolute_url(self):

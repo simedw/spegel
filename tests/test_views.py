@@ -115,7 +115,9 @@ class TestStreamView:
         mock_client.stream = mock_stream
 
         chunks = []
-        async for chunk in stream_view(view, SAMPLE_HTML, mock_client, "https://test.com"):
+        async for chunk in stream_view(
+            view, SAMPLE_HTML, mock_client, "https://test.com"
+        ):
             chunks.append(chunk)
 
         # Should yield complete lines plus final buffer
@@ -143,7 +145,9 @@ class TestStreamView:
         mock_client.stream = mock_stream
 
         chunks = []
-        async for chunk in stream_view(view, SAMPLE_HTML, mock_client, "https://test.com"):
+        async for chunk in stream_view(
+            view, SAMPLE_HTML, mock_client, "https://test.com"
+        ):
             chunks.append(chunk)
 
         expected = [
@@ -171,7 +175,9 @@ class TestStreamView:
         mock_client.stream = mock_stream
 
         chunks = []
-        async for chunk in stream_view(view, SAMPLE_HTML, mock_client, "https://test.com"):
+        async for chunk in stream_view(
+            view, SAMPLE_HTML, mock_client, "https://test.com"
+        ):
             chunks.append(chunk)
 
         # Empty chunks should be skipped
@@ -184,7 +190,9 @@ class TestViewIntegration:
     @pytest.mark.asyncio
     async def test_view_prompt_construction(self):
         """Test that view prompt is properly combined with content."""
-        view = View(id="test", name="Test", hotkey="t", prompt="Please analyze this webpage:")
+        view = View(
+            id="test", name="Test", hotkey="t", prompt="Please analyze this webpage:"
+        )
 
         mock_client = Mock()
         received_prompts = []
