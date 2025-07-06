@@ -35,7 +35,7 @@ try:
 except ImportError:  # pragma: no cover – dependency is optional until used
     litellm = None  # type: ignore
 
-__all__ = ["LLMClient", "LiteLLMClient", "get_client"]
+__all__ = ["LLMClient", "LiteLLMClient", "get_client", "get_default_client"]
 
 
 class LLMClient:
@@ -140,11 +140,11 @@ class LiteLLMClient(LLMClient):
 # ---------------------------------------------------------------------------
 
 
-def get_client(model: str | None = None) -> tuple[LLMClient | None, bool]:
-    """Get an LLM client with the specified model or default from config.
+def get_client(model: str) -> tuple[LLMClient | None, bool]:
+    """Get an LLM client with the specified model.
 
     Args:
-        model: Optional model identifier. If None, uses default from config.
+        model: The model identifier (e.g., "gpt-4o-mini", "claude-3-5-haiku-20241022")
 
     Returns:
         Tuple of (LLMClient instance or None, success boolean)
@@ -152,19 +152,7 @@ def get_client(model: str | None = None) -> tuple[LLMClient | None, bool]:
     if litellm is None:
         return None, False
 
-    # If no model specified, get default from config
-    if model is None:
-        # Import config here to avoid circular imports
-        try:
-            from .config import load_config
-        except ImportError:
-            # Handle case when running as script directly
-            from spegel.config import load_config
-
-        config = load_config()
-        model = config.ai.default_model
-
-    # Check if a specific model is requested via environment variable
+    # Check if a specific model is requested via environment variable (overrides everything)
     custom_model = os.getenv("LITELLM_MODEL")
     if custom_model:
         api_key = os.getenv("LITELLM_API_KEY")
@@ -176,11 +164,37 @@ def get_client(model: str | None = None) -> tuple[LLMClient | None, bool]:
         except Exception:
             pass
 
-    # Try to create client with the specified or default model
+    # Create client with the specified model
     try:
         return LiteLLMClient(model=model), True
     except Exception:
         return None, False
+
+
+def get_default_client() -> tuple[LLMClient | None, bool]:
+    """Return an LLM client with the default model from config.
+
+    Deprecated: Use get_client(model) instead where model comes from your config.
+    This function is kept only for backward compatibility and will load config internally.
+    """
+    # Import config here to avoid circular imports
+    try:
+        from .config import load_config
+    except ImportError:
+        # Handle case when running as script directly
+        from spegel.config import load_config
+
+    config = load_config()
+    return get_client(config.ai.default_model)
+
+
+def create_client_with_model(model: str) -> LLMClient | None:
+    """Create an LLM client with a specific model.
+
+    Deprecated: Use get_client() instead.
+    """
+    client, success = get_client(model=model)
+    return client if success else None
 
 
 if __name__ == "__main__":
@@ -195,14 +209,23 @@ if __name__ == "__main__":
     parser.add_argument("--model", help="Override the default model")
     args = parser.parse_args()
 
-    # Override model if specified
-    if args.model:
-        os.environ["LITELLM_MODEL"] = args.model
+    # Load config to get default model
+    try:
+        from .config import load_config
+    except ImportError:
+        # Handle case when running as script directly
+        from spegel.config import load_config
 
-    client, ok = get_client()
+    config = load_config()
+
+    # Use specified model or default from config
+    model = args.model or config.ai.default_model
+
+    client, ok = get_client(model)
     if not ok or client is None:
         print(
-            "Error: No LLM provider configured. Set one of: OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or LITELLM_MODEL",
+            f"Error: No LLM provider configured for model '{model}'. "
+            "Check your API keys and model configuration.",
             file=sys.stderr,
         )
         sys.exit(1)

@@ -322,8 +322,8 @@ class Spegel(App):
         ] = {}  # Store original content for each view
         self.url_history: List[str] = []  # History of visited URLs for back navigation
 
-        # Initialize LLM client via abstraction layer
-        self.llm_client, self.llm_available = get_client(model=None)
+        # Initialize LLM client with default model from config
+        self.llm_client, self.llm_available = get_client(self.config.ai.default_model)
 
         # Initialize managers
         self.scroll_manager = ScrollManager(self)
