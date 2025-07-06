@@ -96,6 +96,21 @@ prompt = "Transform this webpage into the perfect terminal browsing experience! 
 model="claude-3-5-haiku-20241022"
 ```
 
+## Local Models with Ollama
+
+To run with a local model using Ollama, first pull and serve your desired model:
+
+```bash
+$ ollama pull llama2
+$ ollama serve
+```
+Then set the model in `.spegel.toml` as follows:
+
+```toml
+model = "ollama/llama2"
+```
+Ollama supports models like Llama, Mistral, and many others.
+
 ## License
 MIT License - see LICENSE file for details.
 
