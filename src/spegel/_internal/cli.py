@@ -3,11 +3,11 @@
 # You might be tempted to import things from `__main__` later,
 # but that will cause problems: the code will get executed twice:
 #
-# - When you run `python -m bear_utils` python will execute
+# - When you run `python -m spegel` python will execute
 #   `__main__.py` as a script. That means there won't be any
-#   `bear_utils.__main__` in `sys.modules`.
+#   `spegel.__main__` in `sys.modules`.
 # - When you import `__main__` it will get executed again (as a module) because
-#   there's no `bear_utils.__main__` in `sys.modules`.
+#   there's no `spegel.__main__` in `sys.modules`.
 from __future__ import annotations
 
 from argparse import Action, ArgumentParser, Namespace
