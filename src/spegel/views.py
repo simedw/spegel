@@ -5,6 +5,7 @@ HTML → markdown transformations for each view.  Currently the heavy logic is
 still inside `main.py`; this file provides stubs so the new architecture is in
 place without breaking runtime behaviour.
 """
+
 from __future__ import annotations
 
 from .config import View

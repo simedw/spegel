@@ -11,6 +11,7 @@ import pytest
 from spegel.main import Spegel
 from spegel._internal.cli import main
 
+
 class TestMainCLI:
     """Test the main CLI entry point."""
 

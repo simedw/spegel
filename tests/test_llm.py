@@ -27,6 +27,7 @@ def test_get_default_client_with_api_key():
             client: LLMClient | None = get_default_client()
             assert isinstance(client, GeminiClient)
 
+
 def test_get_default_client_no_genai_module():
     """When genai module is not available, should return None."""
     with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
@@ -180,7 +181,6 @@ class TestLLMErrorScenarios:
         with patch.dict(os.environ, {"GEMINI_API_KEY": ""}):  # Empty key
             client: LLMClient | None = get_default_client()
             assert client is None
-
 
     def test_get_default_client_import_error(self):
         """Test graceful handling when google-genai is not installed."""

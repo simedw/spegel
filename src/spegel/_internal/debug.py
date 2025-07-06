@@ -52,7 +52,7 @@ class _Environment:
     """Installed packages."""
     variables: list[_Variable]
     """Environment variables."""
-    
+
     def __str__(self) -> str:
         """String representation of the environment information."""
         return (
@@ -131,7 +131,11 @@ def _get_debug_info() -> _Environment:
     packages: list[str] = [__PACKAGE_NAME__]
     variables: list[str] = [
         "PYTHONPATH",
-        *[var for var in os.environ if var.startswith(__PACKAGE_NAME__.replace("-", "_"))],
+        *[
+            var
+            for var in os.environ
+            if var.startswith(__PACKAGE_NAME__.replace("-", "_"))
+        ],
     ]
     return _Environment(
         interpreter_name=py_name,
@@ -149,7 +153,6 @@ def _get_installed_packages() -> list[_Package]:
     for dist in importlib.metadata.distributions():
         packages.append({"name": dist.metadata["Name"], "version": dist.version})
     return packages
-
 
 
 if __name__ == "__main__":

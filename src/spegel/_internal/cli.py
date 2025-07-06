@@ -17,6 +17,7 @@ from typing import Any
 from spegel._internal import debug
 from spegel.main import Spegel
 
+
 class _DebugInfo(Action):
     def __init__(self, nargs: int | str | None = 0, **kwargs: Any) -> None:
         super().__init__(nargs=nargs, **kwargs)
@@ -38,10 +39,16 @@ class _About(Action):
 def get_parser() -> ArgumentParser:
     name: str = debug._get_name()
     version: str = f"{name} v{debug._get_version()}"
-    parser = ArgumentParser(description=name.capitalize(), prog=name, exit_on_error=False)
+    parser = ArgumentParser(
+        description=name.capitalize(), prog=name, exit_on_error=False
+    )
     parser.add_argument("-V", "--version", action="version", version=version)
-    parser.add_argument("--about", action=_About, help="Print information about the package")
-    parser.add_argument("--debug_info", action=_DebugInfo, help="Print debug information")
+    parser.add_argument(
+        "--about", action=_About, help="Print information about the package"
+    )
+    parser.add_argument(
+        "--debug_info", action=_DebugInfo, help="Print debug information"
+    )
     parser.add_argument("url", nargs="?", help="URL to open immediately on launch")
     return parser
 
@@ -64,8 +71,10 @@ def main(args: list[str] | None = None) -> int:
         parser: ArgumentParser = get_parser()
         opts: Namespace = parser.parse_args(args)
         initial_url: str | None = opts.url
-        
-        if initial_url is not None and not initial_url.startswith(("http://", "https://")):
+
+        if initial_url is not None and not initial_url.startswith(
+            ("http://", "https://")
+        ):
             # Auto-prepend https if scheme is missing
             initial_url = f"https://{initial_url}"
 

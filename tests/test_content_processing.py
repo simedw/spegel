@@ -515,20 +515,20 @@ class TestTabManagement:
 
         mock_tab1 = Mock()
         mock_tab2 = Mock()
-        
+
         mock_tabbed_content = Mock()
         mock_tabbed_content.get_tab.side_effect = lambda view_id: {
             "raw": mock_tab1,
-            "summary": mock_tab2
+            "summary": mock_tab2,
         }.get(view_id)
-        
+
         # query_one should always return the same TabbedContent mock
         self.app.query_one = Mock(return_value=mock_tabbed_content)
         self.app._reset_tab_names()
 
         assert mock_tab1.label == "Raw"
         assert mock_tab2.label == "Summary"
-        
+
         # Verify refresh was called on both tabs
         mock_tab1.refresh.assert_called_once()
         mock_tab2.refresh.assert_called_once()

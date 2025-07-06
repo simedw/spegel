@@ -29,7 +29,7 @@ from textual.widgets import (
     TabbedContent,
     TabPane,
     TextArea,
-    Tab
+    Tab,
 )
 
 from .web import fetch_url as fetch_url_blocking, html_to_markdown
@@ -680,7 +680,9 @@ class Spegel(App):
         """Process a single view and update its tab name."""
         try:
             # Set immediate loading message in content
-            content_widget: HTMLContent = self.query_one(f"#content-{view_id}", HTMLContent)
+            content_widget: HTMLContent = self.query_one(
+                f"#content-{view_id}", HTMLContent
+            )
             if view_id == "raw":
                 content_widget.update(
                     "## Loading content...\n\n*Please wait while the page is fetched and parsed.*"
@@ -729,7 +731,9 @@ class Spegel(App):
 
         def update_label() -> None:
             """Update the tab label on the main thread."""
-            with suppress(Exception):  # If we can't update the tab label, just ignore it
+            with suppress(
+                Exception
+            ):  # If we can't update the tab label, just ignore it
                 tabbed: TabbedContent = self.query_one(TabbedContent)
                 tab: Tab = tabbed.get_tab(view_id)
                 if tab:
@@ -827,7 +831,6 @@ class Spegel(App):
 
     def _resolve_url(self, url: str) -> str:
         """Resolve a URL against the current page URL, handling relative URLs."""
-        
 
         if not url.startswith(("http://", "https://")):
             if self.current_url:

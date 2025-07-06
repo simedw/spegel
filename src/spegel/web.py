@@ -33,6 +33,7 @@ def fetch_url(url: str, timeout: int = 10) -> str | None:
         # TODO: Log the error or handle it as needed
         return None
 
+
 # ---------------------------------------------------------------------------
 # Cleaning helpers (copied from previous main.py implementation)
 # ---------------------------------------------------------------------------
@@ -234,7 +235,14 @@ def html_to_markdown(html: str, base_url: str | None = None) -> str:
         title: PageElement | Tag | NavigableString | None = soup.find("title")
         title_text: str = title.get_text().strip() if title else "No Title"
 
-        header: list[str] = [f"# {title_text}", "", f"**URL:** `{base_url or ''}`", "", "---", ""]
+        header: list[str] = [
+            f"# {title_text}",
+            "",
+            f"**URL:** `{base_url or ''}`",
+            "",
+            "---",
+            "",
+        ]
         return "\n".join(header) + markdown_content
     except Exception as exc:
         return f"## ❌ Error parsing HTML\n\n```\n{exc}\n```"
