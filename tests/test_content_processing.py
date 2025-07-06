@@ -21,8 +21,8 @@ class TestContentFetching:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
                 # Mock UI components
@@ -161,8 +161,8 @@ class TestViewProcessing:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
                 # Set up views dict
@@ -387,8 +387,8 @@ class TestTabManagement:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
                 # Set up views
@@ -530,8 +530,8 @@ class TestContentState:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
     def test_original_content_storage(self):

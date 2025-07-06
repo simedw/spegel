@@ -80,8 +80,8 @@ class TestSpegelApp:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
 
                 app = Spegel()
                 assert app._startup_url is None
@@ -95,8 +95,8 @@ class TestSpegelApp:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
 
                 app = Spegel(initial_url="https://example.com")
                 assert app._startup_url == "https://example.com"
@@ -110,8 +110,8 @@ class TestSpegelApp:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
 
                 app = Spegel(initial_url="https://example.com")
 
@@ -138,8 +138,8 @@ class TestSpegelApp:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
 
                 app = Spegel()
 
@@ -192,8 +192,8 @@ class TestAppConfiguration:
             mock_config.settings.app_title = "Custom Title"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
 
                 app = Spegel()
                 assert app.title == "Custom Title"
@@ -210,8 +210,8 @@ class TestAppConfiguration:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
 
                 app = Spegel()
                 assert app.current_view == "custom"

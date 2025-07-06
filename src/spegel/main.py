@@ -12,7 +12,7 @@ from textual import on
 
 # External modules
 from .config import load_config, View
-from .llm import get_client
+from .llm import create_client
 
 from textual.app import App, ComposeResult
 from textual.containers import Container
@@ -323,7 +323,8 @@ class Spegel(App):
         self.url_history: List[str] = []  # History of visited URLs for back navigation
 
         # Initialize LLM client with default model from config
-        self.llm_client, self.llm_available = get_client(self.config.ai.default_model)
+        self.llm_client = create_client(self.config.ai.default_model)
+        self.llm_available = self.llm_client is not None
 
         # Initialize managers
         self.scroll_manager = ScrollManager(self)

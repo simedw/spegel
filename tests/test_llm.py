@@ -3,98 +3,44 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spegel.llm import LiteLLMClient, LLMClient, get_client, get_default_client
+from spegel.llm import LiteLLMClient, LLMClient, create_client
 
 
-def test_get_client_no_api_key():
+def test_create_client_no_api_key():
     """When no API key is set, should return None client."""
     with patch.dict(os.environ, {}, clear=True):
         with patch("os.path.exists", return_value=False):  # No Ollama binary
             # Mock LiteLLMClient to raise exception (simulating no API key)
             with patch("spegel.llm.LiteLLMClient", side_effect=Exception("No API key")):
-                client, available = get_client("test-model")
+                client = create_client("test-model")
                 assert client is None
-                assert available is False
 
 
-def test_get_client_with_specific_model():
+def test_create_client_with_specific_model():
     """When specific model is provided, should return LiteLLMClient with that model."""
-    with patch("spegel.llm.litellm") as mock_litellm:
-        client, available = get_client("gpt-4o-mini")
+    with patch("spegel.llm.litellm"):
+        client = create_client("gpt-4o-mini")
         assert isinstance(client, LiteLLMClient)
-        assert available is True
         assert client.model == "gpt-4o-mini"
 
 
-def test_get_default_client_with_openai_api_key():
-    """When OpenAI API key is set, should return LiteLLMClient via deprecated function."""
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-        with patch("spegel.llm.litellm") as mock_litellm:
-            # Mock the config loading
-            with patch("spegel.config.load_config") as mock_load_config:
-                mock_config = Mock()
-                mock_config.ai.default_model = "gpt-4o-mini"
-                mock_load_config.return_value = mock_config
-
-                client, available = get_default_client()
-                assert isinstance(client, LiteLLMClient)
-                assert available is True
-                assert client.model == "gpt-4o-mini"
-
-
-def test_get_default_client_with_anthropic_api_key():
-    """When Anthropic API key is set, should return LiteLLMClient via deprecated function."""
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-        with patch("spegel.llm.litellm") as mock_litellm:
-            # Mock the config loading
-            with patch("spegel.config.load_config") as mock_load_config:
-                mock_config = Mock()
-                mock_config.ai.default_model = "claude-3-5-haiku-20241022"
-                mock_load_config.return_value = mock_config
-
-                client, available = get_default_client()
-                assert isinstance(client, LiteLLMClient)
-                assert available is True
-                assert client.model == "claude-3-5-haiku-20241022"
-
-
-def test_get_default_client_with_gemini_api_key():
-    """When Gemini API key is set, should return LiteLLMClient via deprecated function."""
-    with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
-        with patch("spegel.llm.litellm") as mock_litellm:
-            # Mock the config loading
-            with patch("spegel.config.load_config") as mock_load_config:
-                mock_config = Mock()
-                mock_config.ai.default_model = (
-                    "gemini/gemini-2.5-flash-lite-preview-06-17"
-                )
-                mock_load_config.return_value = mock_config
-
-                client, available = get_default_client()
-                assert isinstance(client, LiteLLMClient)
-                assert available is True
-                assert client.model == "gemini/gemini-2.5-flash-lite-preview-06-17"
-
-
-def test_get_client_with_custom_model():
+def test_create_client_with_custom_model():
     """When custom model is set, should return LiteLLMClient with custom config."""
     with patch.dict(
         os.environ, {"LITELLM_MODEL": "custom-model", "LITELLM_API_KEY": "test-key"}
     ):
         with patch("spegel.llm.litellm") as mock_litellm:
-            client, available = get_client("should-be-overridden")
+            client = create_client("should-be-overridden")
             assert isinstance(client, LiteLLMClient)
-            assert available is True
             assert client.model == "custom-model"
 
 
-def test_get_client_no_litellm_module():
+def test_create_client_no_litellm_module():
     """When litellm module is not available, should return None."""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
         with patch("spegel.llm.litellm", None):
-            client, available = get_client("test-model")
+            client = create_client("test-model")
             assert client is None
-            assert available is False
 
 
 class TestLiteLLMClient:
@@ -243,60 +189,16 @@ class TestLLMClient:
 class TestLLMErrorScenarios:
     """Test error scenarios for LLM functionality."""
 
-    def test_get_client_missing_environment(self):
+    def test_create_client_missing_environment(self):
         """Test client creation with missing environment variables."""
         with patch.dict(os.environ, {}, clear=True):
             with patch("os.path.exists", return_value=False):  # No Ollama binary
-                with patch("spegel.config.load_config") as mock_load_config:
-                    mock_config = Mock()
-                    mock_config.ai.default_model = "test-model"
-                    mock_load_config.return_value = mock_config
-
-                    # Mock LiteLLMClient to raise exception (simulating no API key)
-                    with patch(
-                        "spegel.llm.LiteLLMClient", side_effect=Exception("No API key")
-                    ):
-                        client, available = get_default_client()
-
-                        assert client is None
-                        assert available is False
-
-    def test_get_client_empty_api_key(self):
-        """Test client creation with empty API key."""
-        with patch.dict(
-            os.environ,
-            {
-                "OPENAI_API_KEY": "",  # Empty key
-                "ANTHROPIC_API_KEY": "",  # Empty key
-                "GEMINI_API_KEY": "",  # Empty key
-                "LITELLM_MODEL": "",  # Empty
-                "OLLAMA_MODEL": "",  # Empty
-            },
-            clear=True,
-        ):
-            with patch("os.path.exists", return_value=False):  # No Ollama binary
-                with patch("spegel.config.load_config") as mock_load_config:
-                    mock_config = Mock()
-                    mock_config.ai.default_model = "test-model"
-                    mock_load_config.return_value = mock_config
-
-                    # Mock LiteLLMClient to raise exception (simulating no API key)
-                    with patch(
-                        "spegel.llm.LiteLLMClient", side_effect=Exception("No API key")
-                    ):
-                        client, available = get_default_client()
-
-                        assert client is None
-                        assert available is False
-
-    def test_get_client_import_error(self):
-        """Test graceful handling when litellm is not installed."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "valid-key"}):
-            with patch("spegel.llm.litellm", None):
-                client, available = get_client("test-model")
-
-                assert client is None
-                assert available is False
+                # Mock LiteLLMClient to raise exception (simulating no API key)
+                with patch(
+                    "spegel.llm.LiteLLMClient", side_effect=Exception("No API key")
+                ):
+                    client = create_client("test-model")
+                    assert client is None
 
     @pytest.mark.asyncio
     async def test_litellm_client_stream_network_error(self):
@@ -390,43 +292,3 @@ class TestLLMErrorScenarios:
         except Exception as e:
             # Should not raise unhandled exceptions
             assert False, f"Logging setup should handle errors: {e}"
-
-    def test_ollama_detection(self):
-        """Test Ollama detection logic."""
-        with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3.2"}, clear=True):
-            with patch("spegel.llm.litellm") as mock_litellm:
-                with patch("spegel.config.load_config") as mock_load_config:
-                    mock_config = Mock()
-                    mock_config.ai.default_model = "ollama/llama3.2"
-                    mock_load_config.return_value = mock_config
-
-                    client, available = get_default_client()
-                    assert isinstance(client, LiteLLMClient)
-                    assert available is True
-                    assert client.model == "ollama/llama3.2"
-
-    def test_provider_precedence(self):
-        """Test that configuration model is used regardless of available API keys."""
-        # Multiple API keys available, but config determines the model
-        with patch.dict(
-            os.environ,
-            {
-                "OPENAI_API_KEY": "openai-key",
-                "ANTHROPIC_API_KEY": "anthropic-key",
-                "GEMINI_API_KEY": "gemini-key",
-            },
-            clear=True,
-        ):
-            with patch("spegel.llm.litellm") as mock_litellm:
-                # Mock the config loading
-                with patch("spegel.config.load_config") as mock_load_config:
-                    mock_config = Mock()
-                    mock_config.ai.default_model = "configured-model"
-                    mock_load_config.return_value = mock_config
-
-                    client, available = get_default_client()
-                    assert isinstance(client, LiteLLMClient)
-                    assert available is True
-                    assert (
-                        client.model == "configured-model"
-                    )  # Config model should be used

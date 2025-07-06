@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List
 
 from .config import View
-from .llm import LLMClient, get_client
+from .llm import LLMClient, create_client
 from .web import extract_clean_text, html_to_markdown
 
 
@@ -24,8 +24,8 @@ def _get_view_llm_client(
     """Get the appropriate LLM client for a view, considering model overrides."""
     # If view has a specific model override, create a new client
     if view.model and view.model.strip():
-        view_client, success = get_client(model=view.model.strip())
-        if success and view_client is not None:
+        view_client = create_client(model=view.model.strip())
+        if view_client is not None:
             return view_client
         # Fall back to default client if view-specific model fails
 

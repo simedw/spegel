@@ -35,7 +35,7 @@ try:
 except ImportError:  # pragma: no cover – dependency is optional until used
     litellm = None  # type: ignore
 
-__all__ = ["LLMClient", "LiteLLMClient", "get_client", "get_default_client"]
+__all__ = ["LLMClient", "LiteLLMClient", "create_client"]
 
 
 class LLMClient:
@@ -140,17 +140,17 @@ class LiteLLMClient(LLMClient):
 # ---------------------------------------------------------------------------
 
 
-def get_client(model: str) -> tuple[LLMClient | None, bool]:
-    """Get an LLM client with the specified model.
+def create_client(model: str) -> LLMClient | None:
+    """Create an LLM client with the specified model.
 
     Args:
         model: The model identifier (e.g., "gpt-4o-mini", "claude-3-5-haiku-20241022")
 
     Returns:
-        Tuple of (LLMClient instance or None, success boolean)
+        LLMClient instance or None if creation failed
     """
     if litellm is None:
-        return None, False
+        return None
 
     # Check if a specific model is requested via environment variable (overrides everything)
     custom_model = os.getenv("LITELLM_MODEL")
@@ -158,43 +158,15 @@ def get_client(model: str) -> tuple[LLMClient | None, bool]:
         api_key = os.getenv("LITELLM_API_KEY")
         api_base = os.getenv("LITELLM_API_BASE")
         try:
-            return LiteLLMClient(
-                model=custom_model, api_key=api_key, api_base=api_base
-            ), True
+            return LiteLLMClient(model=custom_model, api_key=api_key, api_base=api_base)
         except Exception:
             pass
 
     # Create client with the specified model
     try:
-        return LiteLLMClient(model=model), True
+        return LiteLLMClient(model=model)
     except Exception:
-        return None, False
-
-
-def get_default_client() -> tuple[LLMClient | None, bool]:
-    """Return an LLM client with the default model from config.
-
-    Deprecated: Use get_client(model) instead where model comes from your config.
-    This function is kept only for backward compatibility and will load config internally.
-    """
-    # Import config here to avoid circular imports
-    try:
-        from .config import load_config
-    except ImportError:
-        # Handle case when running as script directly
-        from spegel.config import load_config
-
-    config = load_config()
-    return get_client(config.ai.default_model)
-
-
-def create_client_with_model(model: str) -> LLMClient | None:
-    """Create an LLM client with a specific model.
-
-    Deprecated: Use get_client() instead.
-    """
-    client, success = get_client(model=model)
-    return client if success else None
+        return None
 
 
 if __name__ == "__main__":
@@ -221,8 +193,8 @@ if __name__ == "__main__":
     # Use specified model or default from config
     model = args.model or config.ai.default_model
 
-    client, ok = get_client(model)
-    if not ok or client is None:
+    client = create_client(model)
+    if client is None:
         print(
             f"Error: No LLM provider configured for model '{model}'. "
             "Check your API keys and model configuration.",
