@@ -1,11 +1,5 @@
-import sys
-from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
 import asyncio
-
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -40,16 +34,10 @@ class TestContentFetching:
     async def test_fetch_and_display_url_success(self):
         """Test successful URL fetching and content display."""
         url = "https://example.com"
-        html_content = (
-            "<html><head><title>Test</title></head><body><h1>Hello</h1></body></html>"
-        )
+        html_content = "<html><head><title>Test</title></head><body><h1>Hello</h1></body></html>"
 
-        with patch(
-            "spegel.main.fetch_url_blocking", return_value=html_content
-        ) as mock_fetch:
-            with patch.object(
-                self.app, "_process_all_views_parallel", new_callable=AsyncMock
-            ) as mock_process:
+        with patch("spegel.main.fetch_url_blocking", return_value=html_content) as mock_fetch:
+            with patch.object(self.app, "_process_all_views_parallel", new_callable=AsyncMock) as mock_process:
                 await self.app.fetch_and_display_url(url)
 
                 # Should update current state
@@ -90,9 +78,7 @@ class TestContentFetching:
         url = "https://example.com"
         error_message = "Connection timeout"
 
-        with patch(
-            "spegel.main.fetch_url_blocking", side_effect=Exception(error_message)
-        ):
+        with patch("spegel.main.fetch_url_blocking", side_effect=Exception(error_message)):
             await self.app.fetch_and_display_url(url)
 
             # Should show error message
@@ -109,9 +95,7 @@ class TestContentFetching:
         ]  # Duplicate
 
         with patch("spegel.main.fetch_url_blocking", return_value="<html>Test</html>"):
-            with patch.object(
-                self.app, "_process_all_views_parallel", new_callable=AsyncMock
-            ):
+            with patch.object(self.app, "_process_all_views_parallel", new_callable=AsyncMock):
                 for url in urls:
                     await self.app.fetch_and_display_url(url)
 
@@ -125,9 +109,7 @@ class TestContentFetching:
         self.app.views_loading = {"analysis"}
 
         with patch("spegel.main.fetch_url_blocking", return_value="<html>Test</html>"):
-            with patch.object(
-                self.app, "_process_all_views_parallel", new_callable=AsyncMock
-            ):
+            with patch.object(self.app, "_process_all_views_parallel", new_callable=AsyncMock):
                 with patch.object(self.app, "_reset_tab_names") as mock_reset:
                     await self.app.fetch_and_display_url("https://example.com")
 
@@ -211,9 +193,7 @@ class TestViewProcessing:
         self.app.query_one = Mock(return_value=mock_content_widget)
 
         # Mock view processing
-        with patch.object(
-            self.app, "update_view_content", new_callable=AsyncMock
-        ) as mock_update:
+        with patch.object(self.app, "update_view_content", new_callable=AsyncMock) as mock_update:
             await self.app._process_single_view("raw")
 
             # Should update loading message first
@@ -237,16 +217,12 @@ class TestViewProcessing:
         self.app.query_one = Mock(return_value=mock_content_widget)
 
         # Mock view processing
-        with patch.object(
-            self.app, "update_view_content", new_callable=AsyncMock
-        ) as mock_update:
+        with patch.object(self.app, "update_view_content", new_callable=AsyncMock) as mock_update:
             await self.app._process_single_view("summary")
 
             # Should show AI preparation message
             calls = mock_content_widget.update.call_args_list
-            ai_message_found = any(
-                "⏳ Preparing AI Analysis" in str(call) for call in calls
-            )
+            ai_message_found = any("⏳ Preparing AI Analysis" in str(call) for call in calls)
             assert ai_message_found
 
             # Should process the view
@@ -263,9 +239,7 @@ class TestViewProcessing:
         self.app.query_one = Mock(return_value=mock_content_widget)
 
         # Mock view processing
-        with patch.object(
-            self.app, "update_view_content", new_callable=AsyncMock
-        ) as mock_update:
+        with patch.object(self.app, "update_view_content", new_callable=AsyncMock) as mock_update:
             await self.app._process_single_view("summary")
 
             # Should show LLM unavailable message
@@ -287,16 +261,12 @@ class TestViewProcessing:
 
         # Mock view processing to raise exception
         error_message = "Processing failed"
-        with patch.object(
-            self.app, "update_view_content", side_effect=Exception(error_message)
-        ):
+        with patch.object(self.app, "update_view_content", side_effect=Exception(error_message)):
             await self.app._process_single_view("summary")
 
             # Should handle error and show error message
             calls = mock_content_widget.update.call_args_list
-            error_message_found = any(
-                "❌ Error" in str(call) and error_message in str(call) for call in calls
-            )
+            error_message_found = any("❌ Error" in str(call) and error_message in str(call) for call in calls)
             assert error_message_found
 
             # Should still mark as loaded
@@ -306,9 +276,7 @@ class TestViewProcessing:
     @pytest.mark.asyncio
     async def test_update_view_content_raw_view(self):
         """Test updating content for raw view."""
-        self.app.raw_html = (
-            "<html><head><title>Test</title></head><body><h1>Hello</h1></body></html>"
-        )
+        self.app.raw_html = "<html><head><title>Test</title></head><body><h1>Hello</h1></body></html>"
         self.app.current_url = "https://example.com"
         self.app.current_view = "raw"
 
@@ -320,23 +288,17 @@ class TestViewProcessing:
         self.app.notify = Mock()
 
         # Mock html_to_markdown
-        with patch(
-            "spegel.main.html_to_markdown", return_value="# Test\nHello world"
-        ) as mock_convert:
+        with patch("spegel.main.html_to_markdown", return_value="# Test\nHello world") as mock_convert:
             await self.app.update_view_content("raw")
 
             # Should convert HTML to markdown
-            mock_convert.assert_called_once_with(
-                self.app.raw_html, self.app.current_url
-            )
+            mock_convert.assert_called_once_with(self.app.raw_html, self.app.current_url)
 
             # Should update content widget
             mock_content_widget.update.assert_called_with("# Test\nHello world")
 
             # Should update links
-            self.app.link_manager.update_links.assert_called_once_with(
-                "# Test\nHello world", "raw"
-            )
+            self.app.link_manager.update_links.assert_called_once_with("# Test\nHello world", "raw")
 
             # Should store original content
             assert self.app.original_content["raw"] == "# Test\nHello world"
@@ -373,9 +335,7 @@ class TestViewProcessing:
             self.app.scroll_manager.update_content_preserve_scroll.assert_called()
 
             # Should update links with final content
-            self.app.link_manager.update_links.assert_called_with(
-                "This is a summary.", "summary"
-            )
+            self.app.link_manager.update_links.assert_called_with("This is a summary.", "summary")
 
             # Should store original content
             assert self.app.original_content["summary"] == "This is a summary."
@@ -425,9 +385,7 @@ class TestTabManagement:
         assert self.app.current_view == "summary"
 
         # Should update links for the view
-        self.app.link_manager.update_links.assert_called_once_with(
-            "Existing content", "summary"
-        )
+        self.app.link_manager.update_links.assert_called_once_with("Existing content", "summary")
 
     @pytest.mark.asyncio
     async def test_handle_tab_change_to_unloaded_view(self):
@@ -446,9 +404,7 @@ class TestTabManagement:
             coro.close()
             return Mock()
 
-        with patch(
-            "asyncio.create_task", side_effect=mock_create_task
-        ) as mock_create_task_patch:
+        with patch("asyncio.create_task", side_effect=mock_create_task) as mock_create_task_patch:
             with patch.object(self.app, "_update_tab_name") as mock_update_tab:
                 await self.app.handle_tab_change(mock_event)
 

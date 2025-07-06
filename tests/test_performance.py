@@ -1,17 +1,11 @@
-import sys
-from pathlib import Path
-from unittest.mock import Mock, patch
-import time
 import asyncio
-
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+import time
+from unittest.mock import Mock, patch
 
 import pytest
 
-from spegel.main import Spegel, LinkManager, ScrollManager
-from spegel.web import html_to_markdown, extract_clean_text
+from spegel.main import LinkManager, ScrollManager, Spegel
+from spegel.web import extract_clean_text, html_to_markdown
 
 
 class TestPerformance:
@@ -28,9 +22,7 @@ class TestPerformance:
         processing_time = time.time() - start_time
 
         # Should process in under 5 seconds
-        assert processing_time < 5.0, (
-            f"Processing took {processing_time}s, expected < 5s"
-        )
+        assert processing_time < 5.0, f"Processing took {processing_time}s, expected < 5s"
         assert isinstance(result, str)
         assert len(result) > 0
 
@@ -54,9 +46,7 @@ class TestPerformance:
         processing_time = time.time() - start_time
 
         # Should process in under 2 seconds
-        assert processing_time < 2.0, (
-            f"Link extraction took {processing_time}s, expected < 2s"
-        )
+        assert processing_time < 2.0, f"Link extraction took {processing_time}s, expected < 2s"
         assert len(links) == num_links
 
     def test_rapid_scroll_updates_performance(self):
@@ -75,9 +65,7 @@ class TestPerformance:
         processing_time = time.time() - start_time
 
         # Should handle rapid updates efficiently
-        assert processing_time < 1.0, (
-            f"Scroll updates took {processing_time}s, expected < 1s"
-        )
+        assert processing_time < 1.0, f"Scroll updates took {processing_time}s, expected < 1s"
         assert mock_content_widget.update.call_count == num_updates
 
     @pytest.mark.asyncio
@@ -117,9 +105,7 @@ class TestPerformance:
 
                 # Should process views concurrently, not sequentially
                 # If sequential: 5 * 0.1 = 0.5s, concurrent should be ~0.1s
-                assert processing_time < 0.3, (
-                    f"Concurrent processing took {processing_time}s, expected < 0.3s"
-                )
+                assert processing_time < 0.3, f"Concurrent processing took {processing_time}s, expected < 0.3s"
 
     def test_memory_usage_with_large_content(self):
         """Test memory efficiency with large content."""
@@ -213,9 +199,7 @@ class TestEdgeCases:
         """Test handling of very long URLs."""
         # Create very long URL (2KB)
         long_url = "https://example.com/" + "a" * 2000
-        html_with_long_url = (
-            f'<html><body><a href="{long_url}">Long URL</a></body></html>'
-        )
+        html_with_long_url = f'<html><body><a href="{long_url}">Long URL</a></body></html>'
 
         result = html_to_markdown(html_with_long_url)
 
@@ -294,20 +278,13 @@ class TestConcurrency:
         link_manager = LinkManager(mock_app)
 
         # Set up links
-        link_manager.current_links = [
-            (f"Link{i}", f"http://example{i}.com", i * 10, i * 10 + 10)
-            for i in range(10)
-        ]
+        link_manager.current_links = [(f"Link{i}", f"http://example{i}.com", i * 10, i * 10 + 10) for i in range(10)]
 
         # Perform concurrent navigation operations
         tasks = []
         for _ in range(20):
-            tasks.append(
-                asyncio.create_task(asyncio.to_thread(link_manager.navigate_next_link))
-            )
-            tasks.append(
-                asyncio.create_task(asyncio.to_thread(link_manager.navigate_prev_link))
-            )
+            tasks.append(asyncio.create_task(asyncio.to_thread(link_manager.navigate_next_link)))
+            tasks.append(asyncio.create_task(asyncio.to_thread(link_manager.navigate_prev_link)))
 
         # Should complete without errors
         await asyncio.gather(*tasks)
@@ -326,10 +303,7 @@ class TestConcurrency:
         def update_content(content):
             scroll_manager.update_content_preserve_scroll(mock_content_widget, content)
 
-        tasks = [
-            asyncio.create_task(asyncio.to_thread(update_content, f"Content {i}"))
-            for i in range(50)
-        ]
+        tasks = [asyncio.create_task(asyncio.to_thread(update_content, f"Content {i}")) for i in range(50)]
 
         # Should complete without errors
         await asyncio.gather(*tasks)
@@ -373,12 +347,7 @@ class TestStressTests:
         """Test handling of documents with many links."""
         # Create HTML with 500 links
         num_links = 500
-        links_html = "".join(
-            [
-                f'<a href="https://example{i}.com">Link {i}</a> '
-                for i in range(num_links)
-            ]
-        )
+        links_html = "".join([f'<a href="https://example{i}.com">Link {i}</a> ' for i in range(num_links)])
 
         html_content = f"<html><body>{links_html}</body></html>"
         markdown = html_to_markdown(html_content)

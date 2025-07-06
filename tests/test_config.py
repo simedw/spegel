@@ -1,16 +1,11 @@
-import sys
+import os
 from pathlib import Path
 import tempfile
-import os
 
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
-import pytest
 from pydantic import ValidationError
+import pytest
 
-from spegel.config import load_config, View, FullConfig, DEFAULT_CONFIG_DICT
+from spegel.config import DEFAULT_CONFIG_DICT, FullConfig, View, load_config
 
 
 def test_view_validation():

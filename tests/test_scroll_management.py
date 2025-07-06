@@ -1,11 +1,4 @@
-import sys
-from pathlib import Path
 from unittest.mock import Mock, patch
-
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 
 from spegel.main import ScrollManager
 
@@ -97,9 +90,7 @@ class TestScrollManager:
         target_scroll_y = 50
         self.mock_content_widget.max_scroll_y = 100
 
-        self.scroll_manager._restore_scroll_position(
-            self.mock_content_widget, target_scroll_y
-        )
+        self.scroll_manager._restore_scroll_position(self.mock_content_widget, target_scroll_y)
 
         # Should set scroll position to target
         assert self.mock_content_widget.scroll_y == 50
@@ -109,9 +100,7 @@ class TestScrollManager:
         target_scroll_y = 150  # Beyond max scroll
         self.mock_content_widget.max_scroll_y = 100
 
-        self.scroll_manager._restore_scroll_position(
-            self.mock_content_widget, target_scroll_y
-        )
+        self.scroll_manager._restore_scroll_position(self.mock_content_widget, target_scroll_y)
 
         # Should clamp to max scroll
         assert self.mock_content_widget.scroll_y == 100
@@ -121,29 +110,20 @@ class TestScrollManager:
         target_scroll_y = 50
         self.mock_content_widget.max_scroll_y = 0  # No scrollable content
 
-        self.scroll_manager._restore_scroll_position(
-            self.mock_content_widget, target_scroll_y
-        )
+        self.scroll_manager._restore_scroll_position(self.mock_content_widget, target_scroll_y)
 
         # Should not set scroll position
-        assert (
-            not hasattr(self.mock_content_widget, "scroll_y")
-            or self.mock_content_widget.scroll_y != 50
-        )
+        assert not hasattr(self.mock_content_widget, "scroll_y") or self.mock_content_widget.scroll_y != 50
 
     def test_restore_scroll_position_exception_handling(self):
         """Test that exceptions during scroll restoration are handled gracefully."""
         target_scroll_y = 50
 
         # Mock widget that raises exception when accessing max_scroll_y
-        self.mock_content_widget.max_scroll_y = property(
-            lambda self: exec('raise Exception("Test error")')
-        )
+        self.mock_content_widget.max_scroll_y = property(lambda self: exec('raise Exception("Test error")'))
 
         # Should not raise exception
-        self.scroll_manager._restore_scroll_position(
-            self.mock_content_widget, target_scroll_y
-        )
+        self.scroll_manager._restore_scroll_position(self.mock_content_widget, target_scroll_y)
 
     def test_update_content_preserve_scroll_success(self):
         """Test successful content update with scroll preservation."""
@@ -151,21 +131,15 @@ class TestScrollManager:
 
         # Mock successful scroll state capture and restore
         with patch.object(self.scroll_manager, "_capture_scroll_state") as mock_capture:
-            with patch.object(
-                self.scroll_manager, "_restore_scroll_if_needed"
-            ) as mock_restore:
+            with patch.object(self.scroll_manager, "_restore_scroll_if_needed") as mock_restore:
                 mock_capture.return_value = {"scroll_y": 50, "is_at_bottom": False}
 
-                self.scroll_manager.update_content_preserve_scroll(
-                    self.mock_content_widget, new_content
-                )
+                self.scroll_manager.update_content_preserve_scroll(self.mock_content_widget, new_content)
 
                 # Should capture state, update content, and restore scroll
                 mock_capture.assert_called_once_with(self.mock_content_widget)
                 self.mock_content_widget.update.assert_called_once_with(new_content)
-                mock_restore.assert_called_once_with(
-                    self.mock_content_widget, {"scroll_y": 50, "is_at_bottom": False}
-                )
+                mock_restore.assert_called_once_with(self.mock_content_widget, {"scroll_y": 50, "is_at_bottom": False})
 
     def test_update_content_preserve_scroll_exception_fallback(self):
         """Test fallback behavior when scroll preservation fails."""
@@ -177,9 +151,7 @@ class TestScrollManager:
             "_capture_scroll_state",
             side_effect=Exception("Test error"),
         ):
-            self.scroll_manager.update_content_preserve_scroll(
-                self.mock_content_widget, new_content
-            )
+            self.scroll_manager.update_content_preserve_scroll(self.mock_content_widget, new_content)
 
             # Should still update content as fallback
             self.mock_content_widget.update.assert_called_once_with(new_content)
@@ -193,15 +165,11 @@ class TestScrollManager:
         self.mock_content_widget.max_scroll_y = 100
 
         for content in content_updates:
-            self.scroll_manager.update_content_preserve_scroll(
-                self.mock_content_widget, content
-            )
+            self.scroll_manager.update_content_preserve_scroll(self.mock_content_widget, content)
 
         # Should preserve user's scroll position for each update
         assert self.mock_content_widget.update.call_count == 3
-        assert (
-            self.mock_app.call_after_refresh.call_count == 3
-        )  # Should schedule restoration each time
+        assert self.mock_app.call_after_refresh.call_count == 3  # Should schedule restoration each time
 
 
 class TestScrollIntegration:
@@ -237,9 +205,7 @@ class TestScrollIntegration:
         self.app.scroll_manager = Mock()
 
         # This would be called during streaming in update_view_content
-        self.app.scroll_manager.update_content_preserve_scroll(
-            mock_content_widget, "streaming content"
-        )
+        self.app.scroll_manager.update_content_preserve_scroll(mock_content_widget, "streaming content")
 
         # Should call the scroll manager method
         self.app.scroll_manager.update_content_preserve_scroll.assert_called_once_with(
@@ -282,9 +248,7 @@ class TestScrollEdgeCases:
         target_scroll_y = 50.5
         self.mock_content_widget.max_scroll_y = 100
 
-        self.scroll_manager._restore_scroll_position(
-            self.mock_content_widget, target_scroll_y
-        )
+        self.scroll_manager._restore_scroll_position(self.mock_content_widget, target_scroll_y)
 
         assert self.mock_content_widget.scroll_y == 50.5
 
@@ -298,9 +262,7 @@ class TestScrollEdgeCases:
         """Test content update with very long content."""
         long_content = "A" * 10000  # Very long content
 
-        self.scroll_manager.update_content_preserve_scroll(
-            self.mock_content_widget, long_content
-        )
+        self.scroll_manager.update_content_preserve_scroll(self.mock_content_widget, long_content)
 
         self.mock_content_widget.update.assert_called_once_with(long_content)
 
@@ -310,9 +272,7 @@ class TestScrollEdgeCases:
         contents = [f"Content update {i}" for i in range(10)]
 
         for content in contents:
-            self.scroll_manager.update_content_preserve_scroll(
-                self.mock_content_widget, content
-            )
+            self.scroll_manager.update_content_preserve_scroll(self.mock_content_widget, content)
 
         # Should handle all updates
         assert self.mock_content_widget.update.call_count == 10

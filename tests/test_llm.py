@@ -1,15 +1,9 @@
-import sys
-from pathlib import Path
 import os
 from unittest.mock import Mock, patch
 
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 import pytest
 
-from spegel.llm import get_default_client, GeminiClient, LLMClient
+from spegel.llm import GeminiClient, LLMClient, get_default_client
 
 
 def test_get_default_client_no_api_key():
@@ -79,9 +73,7 @@ class TestGeminiClient:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
 
             client = GeminiClient("test-key")
 
@@ -107,9 +99,7 @@ class TestGeminiClient:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
 
             client = GeminiClient("test-key")
 
@@ -143,9 +133,7 @@ class TestGeminiClient:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
 
             client = GeminiClient("test-key")
 
@@ -209,9 +197,7 @@ class TestLLMErrorScenarios:
             async def mock_generate_content_stream(*args, **kwargs):
                 raise Exception("Network error")
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
 
             client = GeminiClient("test-key")
 
@@ -246,9 +232,7 @@ class TestLLMErrorScenarios:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
 
             client = GeminiClient("test-key")
 
@@ -290,9 +274,7 @@ class TestLLMErrorScenarios:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
 
             client = GeminiClient("test-key")
 
@@ -318,9 +300,7 @@ class TestLLMErrorScenarios:
             async def mock_generate_content_stream(*args, **kwargs):
                 return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+            mock_client.aio.models.generate_content_stream = mock_generate_content_stream
 
             client = GeminiClient("test-key")
 
@@ -337,9 +317,7 @@ class TestLLMErrorScenarios:
             mock_genai.Client.return_value = mock_client
 
             # Mock logging to raise exception during client creation
-            with patch(
-                "spegel.llm.logger.info", side_effect=Exception("Logging failed")
-            ):
+            with patch("spegel.llm.logger.info", side_effect=Exception("Logging failed")):
                 # Should still create client despite logging errors
                 client = GeminiClient("test-key")
                 assert client._client == mock_client
