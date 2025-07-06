@@ -1,15 +1,9 @@
-import sys
-from pathlib import Path
 import os
 from unittest.mock import Mock, patch
 
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 import pytest
 
-from spegel.llm import get_default_client, GeminiClient, LLMClient
+from spegel.llm import GeminiClient, LLMClient, get_default_client
 
 
 def test_get_default_client_no_api_key():

@@ -1,10 +1,4 @@
-import sys
-from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
-
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
