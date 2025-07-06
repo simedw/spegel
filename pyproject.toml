@@ -62,3 +62,59 @@ build-backend = "hatchling.build"
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-v"
+
+[tool.ruff]
+# Basic config for Ruff
+line-length = 88
+select = [
+    "E",  # Errors
+    "F",  # Fatal errors
+    "I",  # Informational messages
+    "N",  # Non-fatal errors
+    "T",  # Type annotations
+    "W",  # Warnings
+]
+ignore = [
+    "E501",  # Line too long
+    "F401",  # Module imported but unused
+    "F403",  # 'from module import *' used; unable to detect undefined names
+    "F405",  # Name may be undefined, or defined from star imports: module
+]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+source = [
+    "src/"
+]
+
+[tool.coverage.paths]
+equivalent = [
+    "src/",
+    ".venv/lib/*/site-packages/",
+    ".venvs/*/lib/*/site-packages/",
+]
+
+[tool.coverage.report]
+precision = 2
+omit = [
+    "src/*/__init__.py",
+    "src/*/__main__.py",
+    "tests/__init__.py",
+]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING",
+]
+
+[tool.coverage.json]
+output = "htmlcov/coverage.json"
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[dependency-groups]
+dev = [
+    "nox>=2025.5.1",
+    "pytest-cov>=6.2.1",
+]
