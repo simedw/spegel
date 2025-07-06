@@ -51,7 +51,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [project.scripts]
-spegel = "spegel.main:main"
+spegel = "spegel._internal.cli:main"
 
 [project.optional-dependencies]
 dev = [

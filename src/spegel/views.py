@@ -1,12 +1,3 @@
-from __future__ import annotations
-
-from typing import List
-
-from .config import View
-from .llm import LLMClient
-from .web import extract_clean_text, html_to_markdown
-
-
 """View processing logic for Spegel.
 
 For now this module contains thin wrappers that will eventually host the full
@@ -14,6 +5,11 @@ HTML → markdown transformations for each view.  Currently the heavy logic is
 still inside `main.py`; this file provides stubs so the new architecture is in
 place without breaking runtime behaviour.
 """
+from __future__ import annotations
+
+from .config import View
+from .llm import LLMClient
+from .web import extract_clean_text, html_to_markdown
 
 __all__ = ["process_view", "stream_view"]
 
@@ -44,7 +40,7 @@ async def process_view(
 
     full_prompt = f"{view.prompt}\n\nWebpage content:\n{clean_text}"
 
-    parts: List[str] = []
+    parts: list[str] = []
     async for chunk in llm_client.stream(full_prompt, ""):
         if chunk:
             parts.append(chunk)

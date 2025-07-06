@@ -15,9 +15,8 @@ from spegel.llm import get_default_client, GeminiClient, LLMClient
 def test_get_default_client_no_api_key():
     """When no API key is set, should return None client."""
     with patch.dict(os.environ, {}, clear=True):
-        client, available = get_default_client()
+        client: LLMClient | None = get_default_client()
         assert client is None
-        assert available is False
 
 
 def test_get_default_client_with_api_key():
@@ -25,18 +24,15 @@ def test_get_default_client_with_api_key():
     with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
         with patch("spegel.llm.genai") as mock_genai:
             mock_genai.Client.return_value = Mock()
-            client, available = get_default_client()
+            client: LLMClient | None = get_default_client()
             assert isinstance(client, GeminiClient)
-            assert available is True
-
 
 def test_get_default_client_no_genai_module():
     """When genai module is not available, should return None."""
     with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
         with patch("spegel.llm.genai", None):
-            client, available = get_default_client()
+            client: LLMClient | None = get_default_client()
             assert client is None
-            assert available is False
 
 
 class TestGeminiClient:
@@ -176,27 +172,22 @@ class TestLLMErrorScenarios:
     def test_get_default_client_missing_environment(self):
         """Test client creation with missing environment variables."""
         with patch.dict(os.environ, {}, clear=True):
-            client, available = get_default_client()
-
+            client: LLMClient | None = get_default_client()
             assert client is None
-            assert available is False
 
     def test_get_default_client_invalid_api_key(self):
         """Test client creation with invalid API key format."""
         with patch.dict(os.environ, {"GEMINI_API_KEY": ""}):  # Empty key
-            client, available = get_default_client()
-
+            client: LLMClient | None = get_default_client()
             assert client is None
-            assert available is False
+
 
     def test_get_default_client_import_error(self):
         """Test graceful handling when google-genai is not installed."""
         with patch.dict(os.environ, {"GEMINI_API_KEY": "valid-key"}):
             with patch("spegel.llm.genai", None):
-                client, available = get_default_client()
-
+                client: LLMClient | None = get_default_client()
                 assert client is None
-                assert available is False
 
     @pytest.mark.asyncio
     async def test_gemini_client_stream_network_error(self):
