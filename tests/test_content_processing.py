@@ -21,7 +21,7 @@ class TestContentFetching:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
                 self.app = Spegel()
 
@@ -161,7 +161,7 @@ class TestViewProcessing:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
                 self.app = Spegel()
 
@@ -387,7 +387,7 @@ class TestTabManagement:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
                 self.app = Spegel()
 
@@ -530,7 +530,7 @@ class TestContentState:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
                 self.app = Spegel()
 

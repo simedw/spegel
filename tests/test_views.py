@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from spegel.config import View
-from spegel.views import process_view, stream_view
+from spegel.views import stream_view
 
 SAMPLE_HTML = """
 <html>
@@ -15,56 +15,6 @@ SAMPLE_HTML = """
 </body>
 </html>
 """
-
-
-class TestProcessView:
-    """Test the process_view function."""
-
-    @pytest.mark.asyncio
-    async def test_process_raw_view(self):
-        """Raw view should return HTML converted to markdown."""
-        view = View(id="raw", name="Raw", hotkey="r", prompt="")
-
-        result = await process_view(view, SAMPLE_HTML, None, "https://test.com")
-
-        # Should contain markdown conversion
-        assert "# Test Page" in result
-        assert "**URL:** `https://test.com`" in result
-        assert "[a link](https://example.com)" in result
-
-    @pytest.mark.asyncio
-    async def test_process_view_no_llm(self):
-        """Non-raw view without LLM should return error message."""
-        view = View(id="summary", name="Summary", hotkey="s", prompt="Summarize this")
-
-        result = await process_view(view, SAMPLE_HTML, None, "https://test.com")
-
-        assert "LLM not available" in result
-        assert "Set GEMINI_API_KEY" in result
-
-    @pytest.mark.asyncio
-    async def test_process_view_with_llm(self):
-        """Non-raw view with LLM should stream response."""
-        view = View(id="summary", name="Summary", hotkey="s", prompt="Summarize this")
-
-        # Mock LLM client
-        mock_client = Mock()
-
-        async def mock_stream(prompt, content):
-            yield "This is a "
-            yield "summary of "
-            yield "the content."
-
-        mock_client.stream = mock_stream
-
-        result = await process_view(view, SAMPLE_HTML, mock_client, "https://test.com")
-
-        # Chunks are joined with newlines, so check for the individual parts
-        assert "This is a " in result
-        assert "summary of " in result
-        assert "the content." in result
-        # View name should not be in content (it's in the tab)
-        assert "## ✨ Summary" not in result
 
 
 class TestStreamView:
@@ -203,7 +153,11 @@ class TestViewIntegration:
 
         mock_client.stream = mock_stream
 
-        await process_view(view, SAMPLE_HTML, mock_client, "https://test.com")
+        chunks = []
+        async for chunk in stream_view(
+            view, SAMPLE_HTML, mock_client, "https://test.com"
+        ):
+            chunks.append(chunk)
 
         # Should have received the combined prompt
         assert len(received_prompts) == 1
@@ -211,3 +165,4 @@ class TestViewIntegration:
         assert "Please analyze this webpage:" in full_prompt
         assert "Webpage content:" in full_prompt
         assert "Main Title" in full_prompt  # Content from cleaned HTML
+        assert chunks == ["Analysis complete"]

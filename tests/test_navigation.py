@@ -221,7 +221,7 @@ class TestURLResolution:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
                 self.app = Spegel()
                 self.app.current_url = "https://example.com/page"
@@ -271,7 +271,7 @@ class TestHistoryManagement:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
                 self.app = Spegel()
 
@@ -384,7 +384,7 @@ class TestURLInputHandling:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
                 self.app = Spegel()
 

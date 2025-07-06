@@ -12,7 +12,7 @@ from textual import on
 
 # External modules
 from .config import load_config, View
-from .llm import get_default_client
+from .llm import get_client
 
 from textual.app import App, ComposeResult
 from textual.containers import Container
@@ -323,7 +323,7 @@ class Spegel(App):
         self.url_history: List[str] = []  # History of visited URLs for back navigation
 
         # Initialize LLM client via abstraction layer
-        self.llm_client, self.llm_available = get_default_client()
+        self.llm_client, self.llm_available = get_client(model=None)
 
         # Initialize managers
         self.scroll_manager = ScrollManager(self)
@@ -686,7 +686,7 @@ class Spegel(App):
                     )
                 else:
                     content_widget.update(
-                        f"## LLM not available\n\nAdd `GEMINI_API_KEY` to .env file\n\n**View:** {self.views[view_id].description}"
+                        f"## LLM not available\n\nAdd one of: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, or `LITELLM_MODEL` to .env file\n\n**View:** {self.views[view_id].description}"
                     )
 
             # Yield control to allow UI updates

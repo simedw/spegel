@@ -1,4 +1,4 @@
-# Spegel – Reflect the web through AI
+# Spegel - Reflect the web through AI
 
 Automatically rewrites the websites into markdown optimised for viewing in the terminal.
 Read intro blog post [here](https://simedw.com/2025/06/23/introducing-spegel/)
@@ -14,14 +14,14 @@ Sometimes you don't want to read through someone's life story just to get to a r
 
 Requires Python 3.11+
 
+```bash
+$ pip install spegel
 ```
-pip install spegel
-```
-or clone the repo and install it editable mode
+or clone the repo and install it in editable mode
 
 ```bash
 # Clone and enter the directory
-$ git clone <repo-url>
+$ git clone https://github.com/simedw/spegel.git
 $ cd spegel
 
 # Install dependencies and the CLI
@@ -29,11 +29,9 @@ $ pip install -e .
 ```
 
 ## API Keys
-Spegel is currently only support Gemini 2.5 Flash, to use it you need to provide your API key in the env
+Spegel is using [litellm](https://github.com/BerriAI/litellm), which allows the use of the  common LLMs, both local and external. 
 
-```
-GEMINI_API_KEY=...
-```
+By default `Gemini 2.5 Flash Lite` is used, which requires you to set the `GEMINI_API_KEY`, see [env_example.txt](/env_example.txt)
 
 
 ## Usage
@@ -83,6 +81,9 @@ Example snippet:
 default_view = "terminal"
 app_title = "Spegel"
 
+[ai]
+default_model="gpt-4.1-nano"
+
 [[views]]
 id = "raw"
 name = "Raw View"
@@ -92,8 +93,11 @@ prompt = ""
 id = "terminal"
 name = "Terminal"
 prompt = "Transform this webpage into the perfect terminal browsing experience! ..."
+model="claude-3-5-haiku-20241022"
 ```
 
----
+## License
+MIT License - see LICENSE file for details.
+
 
 For more, see the code or open an issue!

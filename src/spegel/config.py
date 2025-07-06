@@ -17,6 +17,7 @@ This module is responsible for:
 
 __all__ = [
     "View",
+    "AI",
     "Settings",
     "UI",
     "FullConfig",
@@ -35,12 +36,17 @@ class View(BaseModel):
     description: str = ""
     icon: str = ""
     prompt: str = ""
+    model: str = ""  # Optional model override for this view
 
     @model_validator(mode="after")
     def validate_hotkey(cls, values):  # type: ignore[override]
         if len(values.hotkey) != 1:
             raise ValueError("Hotkey must be a single character")
         return values
+
+
+class AI(BaseModel):
+    default_model: str = "gemini/gemini-2.5-flash-lite-preview-06-17"
 
 
 class Settings(BaseModel):
@@ -57,6 +63,7 @@ class UI(BaseModel):
 
 class FullConfig(BaseModel):
     settings: Settings = Settings()
+    ai: AI = AI()
     ui: UI = UI()
     views: List[View] = Field(default_factory=list)
 
@@ -75,6 +82,9 @@ DEFAULT_CONFIG_DICT: Dict[str, Any] = {
         "max_history": 50,
         "stream_delay": 0.01,
         "app_title": "Spegel",
+    },
+    "ai": {
+        "default_model": "gemini/gemini-2.5-flash-lite-preview-06-17",
     },
     "ui": {"show_icons": True, "compact_mode": False},
     "views": [

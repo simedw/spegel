@@ -80,7 +80,7 @@ class TestSpegelApp:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
 
                 app = Spegel()
@@ -95,7 +95,7 @@ class TestSpegelApp:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
 
                 app = Spegel(initial_url="https://example.com")
@@ -110,7 +110,7 @@ class TestSpegelApp:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
 
                 app = Spegel(initial_url="https://example.com")
@@ -138,7 +138,7 @@ class TestSpegelApp:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
 
                 app = Spegel()
@@ -192,7 +192,7 @@ class TestAppConfiguration:
             mock_config.settings.app_title = "Custom Title"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
 
                 app = Spegel()
@@ -210,7 +210,7 @@ class TestAppConfiguration:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
+            with patch("spegel.main.get_client") as mock_get_client:
                 mock_get_client.return_value = (None, False)
 
                 app = Spegel()
