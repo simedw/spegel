@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
 
 import tomllib
 from pydantic import BaseModel, Field, model_validator
@@ -58,9 +58,9 @@ class UI(BaseModel):
 class FullConfig(BaseModel):
     settings: Settings = Settings()
     ui: UI = UI()
-    views: List[View] = Field(default_factory=list)
+    views: list[View] = Field(default_factory=list)
 
-    def view_map(self) -> Dict[str, View]:
+    def view_map(self) -> dict[str, View]:
         """Return a mapping of view_id → View for quick lookup."""
         return {v.id: v for v in self.views if v.enabled}
 
@@ -69,7 +69,7 @@ class FullConfig(BaseModel):
 # Defaults
 # --------------------------------------------------------------------------------------
 
-DEFAULT_CONFIG_DICT: Dict[str, Any] = {
+DEFAULT_CONFIG_DICT: dict[str, Any] = {
     "settings": {
         "default_view": "terminal",
         "max_history": 50,
@@ -104,7 +104,7 @@ DEFAULT_CONFIG_DICT: Dict[str, Any] = {
 }
 
 
-def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     """Recursively merge two dicts (override wins)."""
     result = base.copy()
     for key, value in override.items():
@@ -133,7 +133,7 @@ def load_config() -> FullConfig:
         Path.home() / ".config" / "spegel" / "config.toml",
     ]
 
-    merged: Dict[str, Any] = DEFAULT_CONFIG_DICT
+    merged: dict[str, Any] = DEFAULT_CONFIG_DICT
 
     # Only load the first config file found, not all of them
     for path in config_paths:

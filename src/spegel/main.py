@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-"""
-Spegel - Reflect the web through AI
-"""
+"""Spegel - Reflect the web through AI"""
 
+from argparse import Namespace
 import asyncio
-from typing import Optional, Dict, List
-
+from contextlib import suppress
 from dotenv import load_dotenv
 import re
 from textual import on
+from typing import cast, Literal
+from urllib.parse import urljoin
+
+from spegel.config import FullConfig
+from spegel.llm import LLMClient
 
 # External modules
 from .config import load_config, View
 from .llm import get_default_client
+
 
 from textual.app import App, ComposeResult
 from textual.containers import Container
@@ -25,6 +29,7 @@ from textual.widgets import (
     TabbedContent,
     TabPane,
     TextArea,
+    Tab,
 )
 
 from .web import fetch_url as fetch_url_blocking, html_to_markdown
@@ -44,7 +49,7 @@ class HTMLContent(Markdown):
     def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
         """Handle link clicks to navigate within the browser instead of opening externally."""
         # Get the main app instance
-        app = self.app
+        app: Spegel = cast("Spegel", self.app)
         if hasattr(app, "handle_internal_link_click"):
             # Prevent default behavior (opening in external browser)
             event.prevent_default()
@@ -74,12 +79,12 @@ class LinkManager:
 
     def __init__(self, app):
         self.app = app
-        self.current_links: List[
+        self.current_links: list[
             tuple
         ] = []  # List of (link_text, link_url, start_pos, end_pos) tuples
         self.current_link_index: int = -1  # Currently selected link index
 
-    def extract_links_from_markdown(self, content: str) -> List[tuple]:
+    def extract_links_from_markdown(self, content: str) -> list[tuple]:
         """Extract all links from markdown content with position tracking."""
         # Regex to match markdown links: [text](url) - including angle brackets from html2text
         link_pattern = r"\[([^\]]+)\]\(([^)]+)\)"
@@ -232,7 +237,7 @@ class ScrollManager:
                 )
             )
 
-    def _restore_scroll_position(self, content_widget, target_scroll_y: int) -> None:
+    def _restore_scroll_position(self, content_widget, target_scroll_y: float) -> None:
         """Restore scroll position after content update."""
         try:
             # Ensure we don't scroll beyond the new content bounds
@@ -298,10 +303,10 @@ class Spegel(App):
 
     def __init__(self, initial_url: str | None = None, **kwargs):
         # Load configuration first (before super().__init__)
-        self.config = load_config()
+        self.config: FullConfig = load_config()
 
         # Load views from config (mapping view_id -> View)
-        self.views: Dict[str, View] = {v.id: v for v in self.config.views if v.enabled}
+        self.views: dict[str, View] = {v.id: v for v in self.config.views if v.enabled}
         self.current_view = self.config.settings.default_view
 
         super().__init__(**kwargs)
@@ -309,25 +314,25 @@ class Spegel(App):
         # Set app title from config
         self.title = self.config.settings.app_title
 
-        self.current_url: Optional[str] = None
+        self.current_url: str | None = None
         # URL provided via CLI to open on startup
-        self._startup_url: Optional[str] = initial_url
+        self._startup_url: str | None = initial_url
         self.raw_html: str = ""
         self.url_input_visible = False
         self.prompt_editor_visible = False
         self.views_loaded: set = set()  # Track which views have been processed
         self.views_loading: set = set()  # Track which views are currently loading
-        self.original_content: Dict[
+        self.original_content: dict[
             str, str
         ] = {}  # Store original content for each view
-        self.url_history: List[str] = []  # History of visited URLs for back navigation
+        self.url_history: list[str] = []  # History of visited URLs for back navigation
 
         # Initialize LLM client via abstraction layer
-        self.llm_client, self.llm_available = get_default_client()
+        self.llm_client: LLMClient | None = get_default_client()
 
         # Initialize managers
-        self.scroll_manager = ScrollManager(self)
-        self.link_manager = LinkManager(self)
+        self.scroll_manager: ScrollManager = ScrollManager(self)
+        self.link_manager: LinkManager = LinkManager(self)
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -380,7 +385,7 @@ class Spegel(App):
         if not self.url_input_visible and not self.prompt_editor_visible:
             self.url_input_visible = True
             self.add_class("url-input-visible")
-            url_input = self.query_one("#url-input", URLInput)
+            url_input: URLInput = self.query_one("#url-input", URLInput)
             url_input.focus()
             if self.current_url:
                 url_input.value = self.current_url
@@ -397,7 +402,7 @@ class Spegel(App):
 
         # Focus the current tab content
         try:
-            content_widget = self.query_one(
+            content_widget: HTMLContent = self.query_one(
                 f"#content-{self.current_view}", HTMLContent
             )
             content_widget.focus()
@@ -419,16 +424,16 @@ class Spegel(App):
             self.add_class("prompt-editor-visible")
 
             # Load current prompt
-            current_prompt = self.views[self.current_view].prompt
-            prompt_editor = self.query_one("#prompt-editor", PromptEditor)
+            current_prompt: str = self.views[self.current_view].prompt
+            prompt_editor: PromptEditor = self.query_one("#prompt-editor", PromptEditor)
             prompt_editor.text = current_prompt
             prompt_editor.focus()
 
     def action_switch_tab(self, tab_id: str) -> None:
         """Switch to a specific tab."""
         if tab_id in self.views:
-            self.current_view = tab_id
-            tabbed_content = self.query_one(TabbedContent)
+            self.current_view: str = tab_id
+            tabbed_content: TabbedContent = self.query_one(TabbedContent)
             tabbed_content.active = tab_id
 
     def action_go_back(self) -> None:
@@ -452,7 +457,7 @@ class Spegel(App):
     def action_scroll_up(self) -> None:
         """Scroll the current content up."""
         try:
-            content_widget = self.query_one(
+            content_widget: HTMLContent = self.query_one(
                 f"#content-{self.current_view}", HTMLContent
             )
             content_widget.action_scroll_up()
@@ -462,7 +467,7 @@ class Spegel(App):
     def action_scroll_down(self) -> None:
         """Scroll the current content down."""
         try:
-            content_widget = self.query_one(
+            content_widget: HTMLContent = self.query_one(
                 f"#content-{self.current_view}", HTMLContent
             )
             content_widget.action_scroll_down()
@@ -534,8 +539,8 @@ class Spegel(App):
         # Handle Ctrl+S for prompt editor
         if self.prompt_editor_visible and event.key == "ctrl+s":
             # Save the prompt
-            prompt_editor = self.query_one("#prompt-editor", PromptEditor)
-            new_prompt = prompt_editor.text
+            prompt_editor: PromptEditor = self.query_one("#prompt-editor", PromptEditor)
+            new_prompt: str = prompt_editor.text
             self.views[self.current_view].prompt = new_prompt
             self.notify(f"Prompt saved for {self.views[self.current_view].name}")
 
@@ -565,18 +570,19 @@ class Spegel(App):
 
         # Handle the case where Textual adds prefixes to tab IDs
         if raw_tab_id.startswith("--content-tab-"):
-            tab_name = raw_tab_id.replace("--content-tab-", "")
+            tab_name: str = raw_tab_id.replace("--content-tab-", "")
         else:
-            tab_name = raw_tab_id
+            tab_name: str = raw_tab_id
 
         if tab_name in self.views:
             self.current_view = tab_name
 
             # Check if this view needs to be loaded on-demand
-            view_config = self.views[tab_name]
+            view_config: View = self.views[tab_name]
 
-            needs_loading = (
-                self.raw_html  # We have content to process
+            has_content = bool(self.raw_html)
+            needs_loading: bool = (
+                has_content  # We have content to process
                 and tab_name not in self.views_loaded  # Not already loaded
                 and tab_name not in self.views_loading  # Not currently loading
                 and not view_config.auto_load  # Not an auto-load view
@@ -620,7 +626,7 @@ class Spegel(App):
                 self.url_history = self.url_history[-50:]
 
         # Show loading in current view only
-        current_content_widget = self.query_one(
+        current_content_widget: HTMLContent = self.query_one(
             f"#content-{self.current_view}", HTMLContent
         )
         current_content_widget.update(f"Loading {url}...")
@@ -634,11 +640,11 @@ class Spegel(App):
 
         try:
             # Fetch content
-            html_text = await asyncio.get_event_loop().run_in_executor(
+            html_text: str | None = await asyncio.get_event_loop().run_in_executor(
                 None, fetch_url_blocking, url
             )
 
-            if html_text:
+            if html_text is not None:
                 self.current_url = url
                 self.title = f"LLM Browser - {url}"
                 self.raw_html = html_text
@@ -654,7 +660,7 @@ class Spegel(App):
     async def _process_all_views_parallel(self) -> None:
         """Process views in parallel, respecting auto_load settings."""
         # Only process auto-load views initially
-        auto_load_views = [
+        auto_load_views: list[str] = [
             view_id for view_id, view in self.views.items() if view.auto_load
         ]
 
@@ -674,13 +680,15 @@ class Spegel(App):
         """Process a single view and update its tab name."""
         try:
             # Set immediate loading message in content
-            content_widget = self.query_one(f"#content-{view_id}", HTMLContent)
+            content_widget: HTMLContent = self.query_one(
+                f"#content-{view_id}", HTMLContent
+            )
             if view_id == "raw":
                 content_widget.update(
                     "## Loading content...\n\n*Please wait while the page is fetched and parsed.*"
                 )
             else:
-                if self.llm_available:
+                if self.llm_client is not None:
                     content_widget.update(
                         f"## ⏳ Preparing AI Analysis\n\n**{self.views[view_id].name}** - Getting ready to stream...\n\n*AI response will appear here in real-time.*"
                     )
@@ -713,52 +721,48 @@ class Spegel(App):
 
     def _update_tab_name(self, view_id: str) -> None:
         """Update tab name with loading/loaded indicators."""
-        base_name = self.views[view_id].name
+        base_name: str = self.views[view_id].name
         if view_id in self.views_loading:
-            display_name = f"⏳ {base_name}"
+            display_name: str = f"⏳ {base_name}"
         elif view_id in self.views_loaded:
-            display_name = f"✓ {base_name}"
+            display_name: str = f"✓ {base_name}"
         else:
-            display_name = base_name
+            display_name: str = base_name
 
         def update_label() -> None:
-            try:
-                tabbed = self.query_one(TabbedContent)
-                tab = tabbed.get_tab(view_id)
+            """Update the tab label on the main thread."""
+            with suppress(
+                Exception
+            ):  # If we can't update the tab label, just ignore it
+                tabbed: TabbedContent = self.query_one(TabbedContent)
+                tab: Tab = tabbed.get_tab(view_id)
                 if tab:
                     tab.label = display_name
                     tab.refresh()
-            except Exception:
-                # Fallback: try TabPane
-                try:
-                    pane = self.query_one(f"#{view_id}", TabPane)
-                    pane.label = display_name
-                    pane.refresh()
-                except Exception:
-                    pass
 
         # schedule the label update on main thread
         self.call_later(update_label)
 
     def _reset_tab_names(self) -> None:
         """Reset all tab names to their base names."""
-        for view_id in self.views.keys():
-            try:
-                tab_pane = self.query_one(f"#{view_id}", TabPane)
-                tab_pane.label = self.views[view_id].name
-            except Exception:
-                pass  # Ignore if tab not found
+        with suppress(Exception):  # Ignore if tab not found
+            tabbed: TabbedContent = self.query_one(TabbedContent)
+            for view_id, view in self.views.items():
+                tab: Tab = tabbed.get_tab(view_id)
+                if tab:
+                    tab.label = view.name
+                    tab.refresh()
 
     async def update_view_content(self, view_id: str) -> None:
         """Update content for a specific view."""
         if not self.raw_html:
             return
 
-        content_widget = self.query_one(f"#content-{view_id}", HTMLContent)
+        content_widget: HTMLContent = self.query_one(f"#content-{view_id}", HTMLContent)
 
         if view_id == "raw":
             # Raw view - just parse HTML normally
-            formatted_content = html_to_markdown(self.raw_html, self.current_url)
+            formatted_content: str = html_to_markdown(self.raw_html, self.current_url)
 
             # Store original content and extract links
             self.original_content[view_id] = formatted_content
@@ -779,8 +783,8 @@ class Spegel(App):
             # Other views – use the central processor
             content_widget.update("*Streaming response...*\n\n")
 
-            running_content = ""
-            chunk_count = 0
+            running_content: str = ""
+            chunk_count: int = 0
 
             async for chunk in stream_view(
                 self.views[view_id],
@@ -827,7 +831,6 @@ class Spegel(App):
 
     def _resolve_url(self, url: str) -> str:
         """Resolve a URL against the current page URL, handling relative URLs."""
-        from urllib.parse import urljoin
 
         if not url.startswith(("http://", "https://")):
             if self.current_url:
@@ -863,15 +866,10 @@ class Spegel(App):
         # Use call_later to avoid potential event loop issues
         self.call_later(lambda: self.run_async_task(self.fetch_and_display_url(href)))
 
-    def run_async_task(self, task):
+    def run_async_task(self, task) -> None:
         """Helper to run async tasks from sync context."""
-        import asyncio
-
-        if hasattr(asyncio, "create_task"):
-            asyncio.create_task(task)
-        else:
-            # Fallback for older Python versions
-            asyncio.ensure_future(task)
+        asyncio.create_task(task)
+        # Since we are >3.11, there is no reason to support the fallback for older versions
 
     # ---------------------------------
     # Dynamic Key Binding Setup
@@ -903,36 +901,3 @@ class Spegel(App):
                         severity="warning",
                         timeout=3,
                     )
-
-
-def main() -> None:
-    """CLI entry point for the *spegel* command.
-
-    Usage::
-
-        spegel                # opens browser with welcome screen
-        spegel https://news.ycombinator.com  # auto-loads URL on launch
-    """
-
-    import argparse
-    import sys
-
-    parser = argparse.ArgumentParser(
-        prog="spegel",
-        description="Spegel – Reflect the web through AI (terminal browser)",
-    )
-    parser.add_argument("url", nargs="?", help="URL to open immediately on launch")
-
-    args = parser.parse_args(sys.argv[1:])
-
-    initial_url = args.url
-    if initial_url and not initial_url.startswith(("http://", "https://")):
-        # Auto-prepend https if scheme is missing
-        initial_url = f"https://{initial_url}"
-
-    app = Spegel(initial_url=initial_url)
-    app.run()
-
-
-if __name__ == "__main__":
-    main()

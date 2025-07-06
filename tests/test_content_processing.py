@@ -230,7 +230,7 @@ class TestViewProcessing:
     async def test_process_single_view_llm_view(self):
         """Test processing of LLM-based view."""
         self.app.raw_html = "<html><body><h1>Test</h1></body></html>"
-        self.app.llm_available = True
+        self.app.llm_client = Mock()  # Mock LLM client
 
         # Mock UI components
         mock_content_widget = Mock()
@@ -256,7 +256,7 @@ class TestViewProcessing:
     async def test_process_single_view_no_llm(self):
         """Test processing of LLM view when LLM is not available."""
         self.app.raw_html = "<html><body><h1>Test</h1></body></html>"
-        self.app.llm_available = False
+        self.app.llm_client = None
 
         # Mock UI components
         mock_content_widget = Mock()
@@ -513,15 +513,25 @@ class TestTabManagement:
             "summary": mock_view2,
         }
 
-        # Mock tab panes
-        mock_tab_panes = [Mock(), Mock()]
-        self.app.query_one = Mock(side_effect=mock_tab_panes)
+        mock_tab1 = Mock()
+        mock_tab2 = Mock()
 
+        mock_tabbed_content = Mock()
+        mock_tabbed_content.get_tab.side_effect = lambda view_id: {
+            "raw": mock_tab1,
+            "summary": mock_tab2,
+        }.get(view_id)
+
+        # query_one should always return the same TabbedContent mock
+        self.app.query_one = Mock(return_value=mock_tabbed_content)
         self.app._reset_tab_names()
 
-        # Should update labels for both tabs
-        assert mock_tab_panes[0].label == "Raw"
-        assert mock_tab_panes[1].label == "Summary"
+        assert mock_tab1.label == "Raw"
+        assert mock_tab2.label == "Summary"
+
+        # Verify refresh was called on both tabs
+        mock_tab1.refresh.assert_called_once()
+        mock_tab2.refresh.assert_called_once()
 
 
 class TestContentState:

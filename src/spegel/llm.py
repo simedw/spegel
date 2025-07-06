@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from argparse import Namespace
 import os
 import logging
-from typing import AsyncIterator, Dict, Any
+from typing import Any
+from collections.abc import AsyncIterator
 
 """Light abstraction layer over one or more LLM back-ends.
 
@@ -32,6 +34,7 @@ try:
     from google.genai import types
 except ImportError:  # pragma: no cover – dependency is optional until used
     genai = None  # type: ignore
+    types = None  # type: ignore
 
 __all__ = [
     "LLMClient",
@@ -64,10 +67,12 @@ class GeminiClient(LLMClient):
         self,
         prompt: str,
         content: str,
-        generation_config: Dict[str, Any] | None = None,
+        generation_config: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> AsyncIterator[str]:
-        if generation_config is None:
-            generation_config = types.GenerateContentConfig(
+        config = None
+        if generation_config is None and types is not None:
+            config = types.GenerateContentConfig(
                 temperature=0.2,
                 max_output_tokens=8192,
                 response_mime_type="text/plain",
@@ -75,11 +80,11 @@ class GeminiClient(LLMClient):
                     thinking_budget=0,
                 ),
             )
-        user_content = f"{prompt}\n\n{content}" if content else prompt
+        user_content: str = f"{prompt}\n\n{content}" if content else prompt
         stream = self._client.aio.models.generate_content_stream(
             model=self.model_name,
             contents=user_content,
-            config=generation_config,
+            config=config,
         )
 
         # Log the prompt if logging is enabled
@@ -106,12 +111,12 @@ class GeminiClient(LLMClient):
 # ---------------------------------------------------------------------------
 
 
-def get_default_client() -> tuple[LLMClient | None, bool]:
-    """Return an LLMClient instance if credentials exist, else (None, False)."""
-    api_key = os.getenv("GEMINI_API_KEY")
+def get_default_client() -> LLMClient | None:
+    """Return an LLMClient instance if credentials exist, else None."""
+    api_key: str | None = os.getenv("GEMINI_API_KEY")
     if api_key and genai is not None:
-        return GeminiClient(api_key), True
-    return None, False
+        return GeminiClient(api_key=api_key)
+    return None
 
 
 if __name__ == "__main__":
@@ -123,16 +128,19 @@ if __name__ == "__main__":
         description="Quick CLI wrapper around the configured LLM to answer a prompt."
     )
     parser.add_argument("prompt", help="User prompt/question to send to the model")
-    args = parser.parse_args()
+    args: Namespace = parser.parse_args()
 
-    client, ok = get_default_client()
-    if not ok or client is None:
+    client: LLMClient | None = get_default_client()
+    if client is None:
         print(
             "Error: GEMINI_API_KEY not set or google-genai unavailable", file=sys.stderr
         )
         sys.exit(1)
 
     async def _main() -> None:
+        if client is None:
+            print("No LLM client available", file=sys.stderr)
+            return
         async for chunk in client.stream(args.prompt, ""):
             print(chunk, end="", flush=True)
 
