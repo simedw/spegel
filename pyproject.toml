@@ -64,19 +64,15 @@ pythonpath = ["src"]
 addopts = "-v"
 
 [tool.ruff]
-# Basic config for Ruff
+# Basic config for Ruff, feel free to adjust as needed
 line-length = 88
 select = [
-    "E",  # Errors
-    "F",  # Fatal errors
-    "I",  # Informational messages
-    "N",  # Non-fatal errors
-    "T",  # Type annotations
-    "W",  # Warnings
+    "E",  # pycodestyle errors (PEP 8 violations)
+    "F",  # Pyflakes (unused imports, undefined names, etc.)
+    "N",  # pep8-naming (naming convention violations)
 ]
 ignore = [
     "E501",  # Line too long
-    "F401",  # Module imported but unused
     "F403",  # 'from module import *' used; unable to detect undefined names
     "F405",  # Name may be undefined, or defined from star imports: module
 ]
