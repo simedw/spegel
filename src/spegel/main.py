@@ -324,7 +324,6 @@ class Spegel(App):
 
         # Initialize LLM client with default model from config
         self.llm_client = create_client(self.config.ai.default_model)
-        self.llm_available = self.llm_client is not None
 
         # Initialize managers
         self.scroll_manager = ScrollManager(self)
@@ -681,7 +680,7 @@ class Spegel(App):
                     "## Loading content...\n\n*Please wait while the page is fetched and parsed.*"
                 )
             else:
-                if self.llm_available:
+                if self.llm_client is not None:
                     content_widget.update(
                         f"## ⏳ Preparing AI Analysis\n\n**{self.views[view_id].name}** - Getting ready to stream...\n\n*AI response will appear here in real-time.*"
                     )

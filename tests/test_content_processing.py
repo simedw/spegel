@@ -224,7 +224,7 @@ class TestViewProcessing:
     async def test_process_single_view_llm_view(self):
         """Test processing of LLM-based view."""
         self.app.raw_html = "<html><body><h1>Test</h1></body></html>"
-        self.app.llm_available = True
+        self.app.llm_client = Mock()  # Mock LLM client to simulate availability
 
         # Mock UI components
         mock_content_widget = Mock()
@@ -250,7 +250,7 @@ class TestViewProcessing:
     async def test_process_single_view_no_llm(self):
         """Test processing of LLM view when LLM is not available."""
         self.app.raw_html = "<html><body><h1>Test</h1></body></html>"
-        self.app.llm_available = False
+        self.app.llm_client = None  # No LLM client to simulate unavailability
 
         # Mock UI components
         mock_content_widget = Mock()

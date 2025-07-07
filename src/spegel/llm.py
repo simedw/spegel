@@ -77,7 +77,6 @@ class LiteLLMClient(LLMClient):
         if litellm is None:
             raise RuntimeError("litellm not available")
 
-        # Combine prompt and content
         user_content = f"{prompt}\n\n{content}" if content else prompt
 
         # Prepare messages in the format expected by LiteLLM
@@ -93,11 +92,9 @@ class LiteLLMClient(LLMClient):
             **kwargs,
         }
 
-        # Add API key if provided
         if self.api_key:
             completion_params["api_key"] = self.api_key
 
-        # Add API base if provided
         if self.api_base:
             completion_params["api_base"] = self.api_base
 
@@ -110,7 +107,6 @@ class LiteLLMClient(LLMClient):
         collected: list[str] = []
 
         try:
-            # Use LiteLLM's async completion function - await it to get the async generator
             response = await litellm.acompletion(**completion_params)
 
             async for chunk in response:
@@ -190,7 +186,6 @@ if __name__ == "__main__":
 
     config = load_config()
 
-    # Use specified model or default from config
     model = args.model or config.ai.default_model
 
     client = create_client(model)
