@@ -153,10 +153,10 @@ def create_client(model: str) -> LLMClient | None:
         return None
 
     # Check if a specific model is requested via environment variable (overrides everything)
-    custom_model = os.getenv("LITELLM_MODEL")
+    custom_model = os.getenv("SPEGEL_MODEL")
     if custom_model:
-        api_key = os.getenv("LITELLM_API_KEY")
-        api_base = os.getenv("LITELLM_API_BASE")
+        api_key = os.getenv("SPEGEL_API_KEY")
+        api_base = os.getenv("SPEGEL_API_BASE")
         try:
             return LiteLLMClient(model=custom_model, api_key=api_key, api_base=api_base)
         except Exception:

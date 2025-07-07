@@ -10,7 +10,7 @@
 # Anthropic Claude 
 # ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
-# Custom LiteLLM configuration (override settings)
-# LITELLM_MODEL=gpt-4o-mini
-# LITELLM_API_KEY=your_api_key_here
-# LITELLM_API_BASE=your_api_base_here
+# Set SPEGEL_ to override any .toml settings 
+# SPEGEL_MODEL=gpt-4o-mini
+# SPEGEL_API_KEY=your_api_key_here
+# SPEGEL_API_BASE=your_api_base_here

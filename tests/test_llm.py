@@ -27,7 +27,7 @@ def test_create_client_with_specific_model():
 def test_create_client_with_custom_model():
     """When custom model is set, should return LiteLLMClient with custom config."""
     with patch.dict(
-        os.environ, {"LITELLM_MODEL": "custom-model", "LITELLM_API_KEY": "test-key"}
+        os.environ, {"SPEGEL_MODEL": "custom-model", "SPEGEL_API_KEY": "test-key"}
     ):
         with patch("spegel.llm.litellm") as mock_litellm:
             client = create_client("should-be-overridden")

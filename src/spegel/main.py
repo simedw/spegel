@@ -687,7 +687,7 @@ class Spegel(App):
                     )
                 else:
                     content_widget.update(
-                        f"## LLM not available\n\nAdd one of: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, or `LITELLM_MODEL` to .env file\n\n**View:** {self.views[view_id].description}"
+                        f"## LLM not available\n\nAdd one of: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, or `SPEGEL_MODEL` to .env file\n\n**View:** {self.views[view_id].description}"
                     )
 
             # Yield control to allow UI updates

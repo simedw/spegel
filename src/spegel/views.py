@@ -50,7 +50,7 @@ async def stream_view(
     view_client = _get_view_llm_client(view, default_llm_client)
 
     if view_client is None:
-        yield "## LLM not available\n\nSet one of: OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or LITELLM_MODEL to enable AI processing."
+        yield "## LLM not available\n\nSet one of: OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or SPEGEL_MODEL to enable AI processing."
         return
 
     full_prompt = f"{view.prompt}\n\nWebpage content:\n{clean_text}"
