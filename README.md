@@ -1,3 +1,34 @@
+
+<div align="right">
+  <details>
+    <summary >🌐 Language</summary>
+    <div>
+      <div align="right">
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=en">English</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=zh-CN">简体中文</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=zh-TW">繁體中文</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=ja">日本語</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=ko">한국어</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=hi">हिन्दी</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=th">ไทย</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=fr">Français</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=de">Deutsch</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=es">Español</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=it">Itapano</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=ru">Русский</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=pt">Português</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=nl">Nederlands</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=pl">Polski</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=ar">العربية</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=fa">فارسی</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=tr">Türkçe</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=vi">Tiếng Việt</a></p>
+        <p><a href="https://openaitx.github.io/view.html?user=simedw&project=spegel&lang=id">Bahasa Indonesia</a></p>
+      </div>
+    </div>
+  </details>
+</div>
+
 # Spegel – Reflect the web through AI
 
 Automatically rewrites the websites into markdown optimised for viewing in the terminal.
