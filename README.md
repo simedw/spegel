@@ -87,11 +87,15 @@ default_model="gpt-4.1-nano"
 [[views]]
 id = "raw"
 name = "Raw View"
+hotkey = "1"
+order  = "1"
 prompt = ""
 
 [[views]]
 id = "terminal"
 name = "Terminal"
+hotkey = "2"
+order = "2"
 prompt = "Transform this webpage into the perfect terminal browsing experience! ..."
 model="claude-3-5-haiku-20241022"
 ```
