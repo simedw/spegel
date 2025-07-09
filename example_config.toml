@@ -194,4 +194,4 @@ Format the output like this:
 * pounds -> kg
 * cups -> dl 
 * Keep the output **clean and minimal** — no extra commentary, tips, or nutrition facts.
-* Include the servings."""%                                
+* Include the servings."""                              
