@@ -7,6 +7,15 @@ max_history = 50             # URL history limit
 stream_delay = 0.01          # Streaming delay for AI responses (seconds)
 app_title = "Spegel"         # Application title
 
+[ai]
+# Default LLM model - LiteLLM will automatically detect API keys
+# Examples:
+# - "gpt-4o-mini" (OpenAI)
+# - "claude-3-5-haiku-20241022" (Anthropic)
+# - "gemini/gemini-2.5-flash-lite-preview-06-17" (Google)
+# - "ollama/llama3.2" (Local Ollama)
+default_model = "gemini/gemini-2.5-flash-lite-preview-06-17"
+
 [ui]
 show_icons = true            # Show emoji icons in tabs
 compact_mode = false         # Smaller UI elements
@@ -86,6 +95,7 @@ enabled = true
 auto_load = false            # Load on-demand only
 description = "AI-powered content summary with navigable links"
 icon = "📋"
+model = "gpt-4o-mini"        # Override default model for this view (optional)
 prompt = """Create a comprehensive but concise summary of this webpage content.
 
 **OUTPUT FORMAT: Use markdown with clickable links [text](url)**

@@ -6,13 +6,16 @@ from typing import AsyncIterator, Dict, Any
 
 """Light abstraction layer over one or more LLM back-ends.
 
-Right now we only implement Google Gemini via `google-genai`, but the
-interface allows us to add more providers later without touching UI code.
+Uses LiteLLM to support multiple providers including OpenAI, Anthropic, 
+Google Gemini, and many others through a unified interface.
 """
 
 # Configure logger for LLM interactions (disabled by default)
 logger = logging.getLogger("spegel.llm")
 logger.setLevel(logging.CRITICAL + 1)  # Effectively disabled by default
+
+# Workaround for https://github.com/BerriAI/litellm/issues/11657
+os.environ["DISABLE_AIOHTTP_TRANSPORT"] = "True"
 
 
 def enable_llm_logging(level: int = logging.INFO) -> None:
@@ -28,16 +31,11 @@ def enable_llm_logging(level: int = logging.INFO) -> None:
 
 
 try:
-    from google import genai
-    from google.genai import types
+    import litellm
 except ImportError:  # pragma: no cover – dependency is optional until used
-    genai = None  # type: ignore
+    litellm = None  # type: ignore
 
-__all__ = [
-    "LLMClient",
-    "GeminiClient",
-    "get_default_client",
-]
+__all__ = ["LLMClient", "LiteLLMClient", "create_client"]
 
 
 class LLMClient:
@@ -49,52 +47,84 @@ class LLMClient:
         yield  # This is unreachable, but makes this an async generator
 
 
-class GeminiClient(LLMClient):
-    """Wrapper around google-genai async streaming API."""
+class LiteLLMClient(LLMClient):
+    """Wrapper around LiteLLM for unified LLM provider access."""
 
     def __init__(
-        self, api_key: str, model_name: str = "gemini-2.5-flash-lite-preview-06-17"
+        self,
+        model: str = "gemini/gemini-2.5-flash-lite-preview-06-17",
+        api_key: str | None = None,
+        api_base: str | None = None,
+        **kwargs,
     ):
-        if genai is None:
-            raise RuntimeError("google-genai not installed but GeminiClient requested")
-        self._client = genai.Client(api_key=api_key)
-        self.model_name = model_name
+        if litellm is None:
+            raise RuntimeError("litellm not installed but LiteLLMClient requested")
+
+        self.model = model
+        self.api_key = api_key
+        self.api_base = api_base
+        self.extra_kwargs = kwargs
 
     async def stream(
         self,
         prompt: str,
         content: str,
-        generation_config: Dict[str, Any] | None = None,
+        temperature: float = 0.2,
+        max_tokens: int = 8192,
+        **kwargs,
     ) -> AsyncIterator[str]:
-        if generation_config is None:
-            generation_config = types.GenerateContentConfig(
-                temperature=0.2,
-                max_output_tokens=8192,
-                response_mime_type="text/plain",
-                thinking_config=types.ThinkingConfig(
-                    thinking_budget=0,
-                ),
-            )
+        """Stream response from LiteLLM."""
+        if litellm is None:
+            raise RuntimeError("litellm not available")
+
         user_content = f"{prompt}\n\n{content}" if content else prompt
-        stream = self._client.aio.models.generate_content_stream(
-            model=self.model_name,
-            contents=user_content,
-            config=generation_config,
-        )
+
+        # Prepare messages in the format expected by LiteLLM
+        messages = [{"role": "user", "content": user_content}]
+
+        # Set up completion parameters
+        completion_params = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+            **kwargs,
+        }
+
+        if self.api_key:
+            completion_params["api_key"] = self.api_key
+
+        if self.api_base:
+            completion_params["api_base"] = self.api_base
+
+        # Add any extra kwargs passed during initialization
+        completion_params.update(self.extra_kwargs)
 
         # Log the prompt if logging is enabled
         logger.info("LLM Prompt: %s", user_content)
 
         collected: list[str] = []
 
-        async for chunk in await stream:
-            try:
-                text = chunk.candidates[0].content.parts[0].text  # type: ignore[attr-defined]
-                if text:
-                    collected.append(text)
-                    yield text
-            except Exception:
-                continue
+        try:
+            response = await litellm.acompletion(**completion_params)
+
+            async for chunk in response:
+                try:
+                    # Extract content from the chunk
+                    if chunk.choices and len(chunk.choices) > 0:
+                        delta = chunk.choices[0].delta
+                        if delta and hasattr(delta, "content") and delta.content:
+                            text = delta.content
+                            collected.append(text)
+                            yield text
+                except Exception as e:
+                    logger.warning("Error processing chunk: %s", e)
+                    continue
+
+        except Exception as e:
+            logger.error("Error in LLM completion: %s", e)
+            raise
 
         # Log the complete response if logging is enabled
         if collected:
@@ -106,12 +136,33 @@ class GeminiClient(LLMClient):
 # ---------------------------------------------------------------------------
 
 
-def get_default_client() -> tuple[LLMClient | None, bool]:
-    """Return an LLMClient instance if credentials exist, else (None, False)."""
-    api_key = os.getenv("GEMINI_API_KEY")
-    if api_key and genai is not None:
-        return GeminiClient(api_key), True
-    return None, False
+def create_client(model: str) -> LLMClient | None:
+    """Create an LLM client with the specified model.
+
+    Args:
+        model: The model identifier (e.g., "gpt-4o-mini", "claude-3-5-haiku-20241022")
+
+    Returns:
+        LLMClient instance or None if creation failed
+    """
+    if litellm is None:
+        return None
+
+    # Check if a specific model is requested via environment variable (overrides everything)
+    custom_model = os.getenv("SPEGEL_MODEL")
+    if custom_model:
+        api_key = os.getenv("SPEGEL_API_KEY")
+        api_base = os.getenv("SPEGEL_API_BASE")
+        try:
+            return LiteLLMClient(model=custom_model, api_key=api_key, api_base=api_base)
+        except Exception:
+            pass
+
+    # Create client with the specified model
+    try:
+        return LiteLLMClient(model=model)
+    except Exception:
+        return None
 
 
 if __name__ == "__main__":
@@ -123,20 +174,37 @@ if __name__ == "__main__":
         description="Quick CLI wrapper around the configured LLM to answer a prompt."
     )
     parser.add_argument("prompt", help="User prompt/question to send to the model")
+    parser.add_argument("--model", help="Override the default model")
     args = parser.parse_args()
 
-    client, ok = get_default_client()
-    if not ok or client is None:
+    # Load config to get default model
+    try:
+        from .config import load_config
+    except ImportError:
+        # Handle case when running as script directly
+        from spegel.config import load_config
+
+    config = load_config()
+
+    model = args.model or config.ai.default_model
+
+    client = create_client(model)
+    if client is None:
         print(
-            "Error: GEMINI_API_KEY not set or google-genai unavailable", file=sys.stderr
+            f"Error: No LLM provider configured for model '{model}'. "
+            "Check your API keys and model configuration.",
+            file=sys.stderr,
         )
         sys.exit(1)
 
     async def _main() -> None:
-        async for chunk in client.stream(args.prompt, ""):
-            print(chunk, end="", flush=True)
+        try:
+            async for chunk in client.stream(args.prompt, ""):
+                print(chunk, end="", flush=True)
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            print(f"\nError: {e}", file=sys.stderr)
+            sys.exit(1)
 
-    try:
-        asyncio.run(_main())
-    except KeyboardInterrupt:
-        pass
+    asyncio.run(_main())

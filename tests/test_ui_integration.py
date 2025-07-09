@@ -17,8 +17,8 @@ class TestKeyboardNavigation:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
                 # Mock managers
@@ -202,8 +202,8 @@ class TestOverlayManagement:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
     def test_show_url_input_when_hidden(self):
@@ -334,8 +334,8 @@ class TestScrollActions:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
                 self.app.current_view = "test"
 
@@ -386,8 +386,8 @@ class TestTabSwitching:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
                 # Set up views
@@ -449,8 +449,8 @@ class TestDynamicKeyBindings:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
                 # Set up views
@@ -547,8 +547,8 @@ class TestInternalLinkHandling:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
     def test_handle_internal_link_click_relative_url(self):
@@ -622,8 +622,8 @@ class TestUIStateManagement:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
     def test_overlay_visibility_consistency(self):
