@@ -3,6 +3,7 @@ from unittest.mock import Mock, AsyncMock, patch
 
 from spegel.views import stream_view, _get_view_llm_client
 from spegel.config import View
+from spegel.llm import LLMAuthenticationError
 
 
 class TestStreamView:
@@ -97,10 +98,11 @@ class TestStreamView:
         # Mock client that raises authentication error
         mock_client = AsyncMock()
 
+        # Create mock original error
+        mock_original_error = Exception("API key not valid")
+
         async def mock_stream_with_auth_error(prompt, content):
-            raise RuntimeError(
-                "Authentication failed for model 'openai/gpt-4'. Please set a valid API key for openai."
-            )
+            raise LLMAuthenticationError("openai/gpt-4", "openai", mock_original_error)
             yield  # Make it an async generator (unreachable)
 
         mock_client.stream = mock_stream_with_auth_error
@@ -120,6 +122,7 @@ class TestStreamView:
             error_content = chunks[0]
             assert "🔐 Authentication Error" in error_content
             assert "Authentication failed for model 'openai/gpt-4'" in error_content
+            assert "Please set a valid API key for openai" in error_content
             assert "Quick Setup:" in error_content
             assert "Create a `.env` file" in error_content
             assert "SPEGEL_API_KEY=your_api_key_here" in error_content
