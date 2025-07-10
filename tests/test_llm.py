@@ -18,13 +18,6 @@ def mock_litellm():
         yield mock_litellm
 
 
-def test_create_client_with_specific_model(mock_litellm):
-    """When specific model is provided, should return LiteLLMClient with that model."""
-    client = create_client("gpt-4o-mini")
-    assert isinstance(client, LiteLLMClient)
-    assert client.model == "gpt-4o-mini"
-
-
 def test_create_client_no_api_key():
     """When no API key is set, should return None client."""
     with patch.dict(os.environ, {}, clear=True):
@@ -33,6 +26,13 @@ def test_create_client_no_api_key():
             with patch("spegel.llm.LiteLLMClient", side_effect=Exception("No API key")):
                 client = create_client("test-model")
                 assert client is None
+
+
+def test_create_client_with_specific_model(mock_litellm):
+    """When specific model is provided, should return LiteLLMClient with that model."""
+    client = create_client("gpt-4o-mini")
+    assert isinstance(client, LiteLLMClient)
+    assert client.model == "gpt-4o-mini"
 
 
 def test_create_client_with_custom_model():
