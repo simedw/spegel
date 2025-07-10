@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List
 
 from .config import View
-from .llm import LLMClient, create_client
+from .llm import LLMClient, create_client, LLMAuthenticationError
 from .web import extract_clean_text, html_to_markdown
 
 
@@ -55,13 +55,25 @@ async def stream_view(
 
     full_prompt = f"{view.prompt}\n\nWebpage content:\n{clean_text}"
     buffer: str = ""
-    async for chunk in view_client.stream(full_prompt, ""):
-        if not chunk:
-            continue
-        buffer += chunk
-        while "\n" in buffer:
-            line, buffer = buffer.split("\n", 1)
-            yield line + "\n"
 
-    if buffer:
-        yield buffer
+    try:
+        async for chunk in view_client.stream(full_prompt, ""):
+            if not chunk:
+                continue
+            buffer += chunk
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                yield line + "\n"
+
+        if buffer:
+            yield buffer
+
+    except LLMAuthenticationError as e:
+        # Handle authentication errors with user-friendly message
+        yield f"## 🔐 Authentication Error\n\n{str(e)}\n\n**Quick Setup:**\n\n1. Create a `.env` file in your project directory\n2. Add your API key: `SPEGEL_API_KEY=your_api_key_here`\n3. Or set provider-specific keys like `OPENAI_API_KEY=your_key`\n4. Restart the application"
+    except RuntimeError as e:
+        # Handle other RuntimeErrors
+        yield f"## ❌ Error\n\n{str(e)}"
+    except Exception as e:
+        # Handle other unexpected errors
+        yield f"## ❌ Unexpected Error\n\n{str(e)}"
