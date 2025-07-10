@@ -55,13 +55,26 @@ async def stream_view(
 
     full_prompt = f"{view.prompt}\n\nWebpage content:\n{clean_text}"
     buffer: str = ""
-    async for chunk in view_client.stream(full_prompt, ""):
-        if not chunk:
-            continue
-        buffer += chunk
-        while "\n" in buffer:
-            line, buffer = buffer.split("\n", 1)
-            yield line + "\n"
 
-    if buffer:
-        yield buffer
+    try:
+        async for chunk in view_client.stream(full_prompt, ""):
+            if not chunk:
+                continue
+            buffer += chunk
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                yield line + "\n"
+
+        if buffer:
+            yield buffer
+
+    except RuntimeError as e:
+        # Handle authentication errors and other RuntimeErrors with user-friendly messages
+        error_message = str(e)
+        if "Authentication failed" in error_message:
+            yield f"## 🔐 Authentication Error\n\n{error_message}\n\n**Quick Setup:**\n\n1. Create a `.env` file in your project directory\n2. Add your API key: `SPEGEL_API_KEY=your_api_key_here`\n3. Or set provider-specific keys like `OPENAI_API_KEY=your_key`\n4. Restart the application"
+        else:
+            yield f"## ❌ Error\n\n{error_message}"
+    except Exception as e:
+        # Handle other unexpected errors
+        yield f"## ❌ Unexpected Error\n\n{str(e)}"

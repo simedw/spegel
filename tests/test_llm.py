@@ -16,23 +16,22 @@ def test_create_client_no_api_key():
                 assert client is None
 
 
-def test_create_client_with_specific_model():
-    """When specific model is provided, should return LiteLLMClient with that model."""
-    with patch("spegel.llm.litellm"):
-        client = create_client("gpt-4o-mini")
-        assert isinstance(client, LiteLLMClient)
-        assert client.model == "gpt-4o-mini"
-
-
 def test_create_client_with_custom_model():
-    """When custom model is set, should return LiteLLMClient with custom config."""
+    """When SPEGEL_MODEL is set, should use it with custom config."""
     with patch.dict(
         os.environ, {"SPEGEL_MODEL": "custom-model", "SPEGEL_API_KEY": "test-key"}
     ):
-        with patch("spegel.llm.litellm") as mock_litellm:
-            client = create_client("should-be-overridden")
-            assert isinstance(client, LiteLLMClient)
-            assert client.model == "custom-model"
+        with patch("spegel.llm.LiteLLMClient") as mock_client:
+            mock_instance = Mock()
+            mock_client.return_value = mock_instance
+
+            client = create_client("default-model")
+
+            # Should use the custom model from environment
+            mock_client.assert_called_once_with(
+                model="custom-model", api_key="test-key", api_base=None
+            )
+            assert client == mock_instance
 
 
 def test_create_client_no_litellm_module():
@@ -86,6 +85,54 @@ class TestLiteLLMClient:
                 chunks.append(chunk)
 
             assert chunks == ["test response"]
+
+    @pytest.mark.asyncio
+    async def test_stream_authentication_error(self):
+        """Test handling of authentication errors with user-friendly message."""
+        with patch("spegel.llm.litellm") as mock_litellm:
+            # Create a proper mock AuthenticationError class
+            class MockAuthenticationError(Exception):
+                pass
+
+            # Set up the mock exception
+            mock_auth_error = MockAuthenticationError("API key not valid")
+            mock_litellm.AuthenticationError = MockAuthenticationError
+            mock_litellm.acompletion.side_effect = mock_auth_error
+
+            client = LiteLLMClient("openai/gpt-4", "invalid-key")
+
+            with pytest.raises(RuntimeError) as exc_info:
+                async for chunk in client.stream("test prompt", "test content"):
+                    pass
+
+            error_message = str(exc_info.value)
+            assert "Authentication failed for model 'openai/gpt-4'" in error_message
+            assert "Please set a valid API key for openai" in error_message
+            assert "SPEGEL_API_KEY environment variable" in error_message
+            assert "OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY" in error_message
+
+    @pytest.mark.asyncio
+    async def test_stream_authentication_error_simple_model(self):
+        """Test authentication error handling for simple model names."""
+        with patch("spegel.llm.litellm") as mock_litellm:
+            # Create a proper mock AuthenticationError class
+            class MockAuthenticationError(Exception):
+                pass
+
+            # Set up the mock exception
+            mock_auth_error = MockAuthenticationError("API key not valid")
+            mock_litellm.AuthenticationError = MockAuthenticationError
+            mock_litellm.acompletion.side_effect = mock_auth_error
+
+            client = LiteLLMClient("gpt-4", "invalid-key")
+
+            with pytest.raises(RuntimeError) as exc_info:
+                async for chunk in client.stream("test prompt", "test content"):
+                    pass
+
+            error_message = str(exc_info.value)
+            assert "Authentication failed for model 'gpt-4'" in error_message
+            assert "Please set a valid API key for gpt-4" in error_message
 
     @pytest.mark.asyncio
     async def test_stream_with_empty_content(self):

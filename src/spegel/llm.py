@@ -124,6 +124,29 @@ class LiteLLMClient(LLMClient):
 
         except Exception as e:
             logger.error("Error in LLM completion: %s", e)
+
+            # Check if this is an authentication error
+            try:
+                if (
+                    litellm
+                    and hasattr(litellm, "AuthenticationError")
+                    and isinstance(e, litellm.AuthenticationError)
+                ):
+                    # Extract the model provider from the model name for better error message
+                    model_provider = (
+                        self.model.split("/")[0] if "/" in self.model else self.model
+                    )
+                    raise RuntimeError(
+                        f"Authentication failed for model '{self.model}'. "
+                        f"Please set a valid API key for {model_provider}. "
+                        f"You can set SPEGEL_API_KEY environment variable or the provider-specific "
+                        f"API key (e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY)."
+                    ) from e
+            except TypeError:
+                # isinstance() may fail if AuthenticationError is not a proper type (e.g., in tests)
+                pass
+
+            # Re-raise other exceptions as-is
             raise
 
         # Log the complete response if logging is enabled
