@@ -2,7 +2,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spegel.main import Spegel, main
+from spegel._internal.cli import main
+from spegel.main import Spegel
 
 
 class TestMainCLI:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -38,10 +38,10 @@ class View(BaseModel):
     model: str = ""  # Optional model override for this view
 
     @model_validator(mode="after")
-    def validate_hotkey(cls, values):  # type: ignore[override]
-        if len(values.hotkey) != 1:
+    def validate_hotkey(self) -> Self:
+        if len(self.hotkey) != 1:
             raise ValueError("Hotkey must be a single character")
-        return values
+        return self
 
 
 class AI(BaseModel):
