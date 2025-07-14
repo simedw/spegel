@@ -1,14 +1,6 @@
 import re
-import sys
-from pathlib import Path
 
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
-
-from spegel.web import html_to_markdown, extract_clean_text
-
+from spegel.web import extract_clean_text, html_to_markdown
 
 SIMPLE_HTML = """
 <html>

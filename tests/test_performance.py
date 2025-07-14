@@ -1,17 +1,11 @@
-import sys
-from pathlib import Path
-from unittest.mock import Mock, patch
-import time
 import asyncio
-
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+import time
+from unittest.mock import Mock, patch
 
 import pytest
 
-from spegel.main import Spegel, LinkManager, ScrollManager
-from spegel.web import html_to_markdown, extract_clean_text
+from spegel.main import LinkManager, ScrollManager, Spegel
+from spegel.web import extract_clean_text, html_to_markdown
 
 
 class TestPerformance:
@@ -99,8 +93,8 @@ class TestPerformance:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
 
                 app = Spegel()
                 app.views = {f"view{i}": mock_views[i] for i in range(5)}
@@ -348,8 +342,8 @@ class TestConcurrency:
                 mock_config.settings.app_title = "Test"
                 mock_load_config.return_value = mock_config
 
-                with patch("spegel.main.get_default_client") as mock_get_client:
-                    mock_get_client.return_value = (None, False)
+                with patch("spegel.main.create_client") as mock_create_client:
+                    mock_create_client.return_value = None
 
                     app = Spegel()
                     # Create managers

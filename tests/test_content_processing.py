@@ -1,11 +1,5 @@
-import sys
-from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
 import asyncio
-
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -27,8 +21,8 @@ class TestContentFetching:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
                 # Mock UI components
@@ -167,8 +161,8 @@ class TestViewProcessing:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
                 # Set up views dict
@@ -230,7 +224,7 @@ class TestViewProcessing:
     async def test_process_single_view_llm_view(self):
         """Test processing of LLM-based view."""
         self.app.raw_html = "<html><body><h1>Test</h1></body></html>"
-        self.app.llm_client = Mock()  # Mock LLM client
+        self.app.llm_client = Mock()  # Mock LLM client to simulate availability
 
         # Mock UI components
         mock_content_widget = Mock()
@@ -256,7 +250,7 @@ class TestViewProcessing:
     async def test_process_single_view_no_llm(self):
         """Test processing of LLM view when LLM is not available."""
         self.app.raw_html = "<html><body><h1>Test</h1></body></html>"
-        self.app.llm_client = None
+        self.app.llm_client = None  # No LLM client to simulate unavailability
 
         # Mock UI components
         mock_content_widget = Mock()
@@ -393,8 +387,8 @@ class TestTabManagement:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
                 # Set up views
@@ -546,8 +540,8 @@ class TestContentState:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
                 self.app = Spegel()
 
     def test_original_content_storage(self):

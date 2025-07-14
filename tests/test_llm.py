@@ -1,157 +1,236 @@
-import sys
-from pathlib import Path
 import os
 from unittest.mock import Mock, patch
 
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 import pytest
 
-from spegel.llm import get_default_client, GeminiClient, LLMClient
+from spegel.llm import LiteLLMClient, LLMAuthenticationError, LLMClient, create_client
 
 
-def test_get_default_client_no_api_key():
+@pytest.fixture
+def mock_litellm():
+    """Provides a properly configured litellm mock for testing."""
+    with patch("spegel.llm.litellm") as mock_litellm:
+        # Set up the authentication error class once
+        class MockAuthenticationError(Exception):
+            pass
+
+        mock_litellm.AuthenticationError = MockAuthenticationError
+        yield mock_litellm
+
+
+def test_create_client_no_api_key():
     """When no API key is set, should return None client."""
     with patch.dict(os.environ, {}, clear=True):
-        client: LLMClient | None = get_default_client()
-        assert client is None
+        with patch("os.path.exists", return_value=False):  # No Ollama binary
+            # Mock LiteLLMClient to raise exception (simulating no API key)
+            with patch("spegel.llm.LiteLLMClient", side_effect=Exception("No API key")):
+                client = create_client("test-model")
+                assert client is None
 
 
-def test_get_default_client_with_api_key():
-    """When API key is set, should return GeminiClient."""
-    with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
-        with patch("spegel.llm.genai") as mock_genai:
-            mock_genai.Client.return_value = Mock()
-            client: LLMClient | None = get_default_client()
-            assert isinstance(client, GeminiClient)
+def test_create_client_with_specific_model(mock_litellm):
+    """When specific model is provided, should return LiteLLMClient with that model."""
+    client = create_client("gpt-4o-mini")
+    assert isinstance(client, LiteLLMClient)
+    assert client.model == "gpt-4o-mini"
 
 
-def test_get_default_client_no_genai_module():
-    """When genai module is not available, should return None."""
-    with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
-        with patch("spegel.llm.genai", None):
-            client: LLMClient | None = get_default_client()
+def test_create_client_with_custom_model():
+    """When SPEGEL_MODEL is set, should use it with custom config."""
+    with patch.dict(
+        os.environ, {"SPEGEL_MODEL": "custom-model", "SPEGEL_API_KEY": "test-key"}
+    ):
+        with patch("spegel.llm.LiteLLMClient") as mock_client:
+            mock_instance = Mock()
+            mock_client.return_value = mock_instance
+
+            client = create_client("default-model")
+
+            # Should use the custom model from environment
+            mock_client.assert_called_once_with(
+                model="custom-model", api_key="test-key", api_base=None
+            )
+            assert client == mock_instance
+
+
+def test_create_client_no_litellm_module():
+    """When litellm module is not available, should return None."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        with patch("spegel.llm.litellm", None):
+            client = create_client("test-model")
             assert client is None
 
 
-class TestGeminiClient:
-    """Test GeminiClient functionality."""
+class TestLiteLLMClient:
+    """Test LiteLLMClient functionality."""
 
-    def test_init_without_genai(self):
-        """Should raise RuntimeError if genai is not available."""
-        with patch("spegel.llm.genai", None):
-            with pytest.raises(RuntimeError, match="google-genai not installed"):
-                GeminiClient("test-key")
+    def test_init_without_litellm(self):
+        """Should raise RuntimeError if litellm is not available."""
+        with patch("spegel.llm.litellm", None):
+            with pytest.raises(RuntimeError, match="litellm not installed"):
+                LiteLLMClient("test-model")
 
-    def test_init_with_genai(self):
-        """Should initialize successfully with genai available."""
-        with patch("spegel.llm.genai") as mock_genai:
-            mock_client = Mock()
-            mock_genai.Client.return_value = mock_client
-
-            client = GeminiClient("test-key", "test-model")
-            assert client._client == mock_client
-            assert client.model_name == "test-model"
-            mock_genai.Client.assert_called_once_with(api_key="test-key")
+    def test_init_with_litellm(self, mock_litellm):
+        """Should initialize successfully with litellm available."""
+        client = LiteLLMClient("test-model", "test-key")
+        assert client.model == "test-model"
+        assert client.api_key == "test-key"
 
     @pytest.mark.asyncio
-    async def test_stream_basic(self):
+    async def test_stream_basic(self, mock_litellm):
         """Test basic streaming functionality."""
-        with patch("spegel.llm.genai") as mock_genai:
-            # Mock the client and streaming response
-            mock_client = Mock()
-            mock_genai.Client.return_value = mock_client
+        # Mock the streaming response
+        mock_chunk = Mock()
+        mock_chunk.choices = [Mock()]
+        mock_chunk.choices[0].delta = Mock()
+        mock_chunk.choices[0].delta.content = "test response"
 
-            # Mock the streaming response
-            mock_chunk = Mock()
-            mock_chunk.candidates = [Mock()]
-            mock_chunk.candidates[0].content.parts = [Mock()]
-            mock_chunk.candidates[0].content.parts[0].text = "test response"
+        async def mock_stream():
+            yield mock_chunk
 
-            async def mock_stream():
-                yield mock_chunk
+        # acompletion should return a coroutine that resolves to an async generator
+        async def async_completion_mock(**kwargs):
+            return mock_stream()
 
-            async def mock_generate_content_stream(*args, **kwargs):
-                return mock_stream()
+        mock_litellm.acompletion = async_completion_mock
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+        client = LiteLLMClient("test-model", "test-key")
 
-            client = GeminiClient("test-key")
+        # Collect streamed chunks
+        chunks = []
+        async for chunk in client.stream("test prompt", "test content"):
+            chunks.append(chunk)
 
-            # Collect streamed chunks
-            chunks = []
-            async for chunk in client.stream("test prompt", "test content"):
-                chunks.append(chunk)
-
-            assert chunks == ["test response"]
+        assert chunks == ["test response"]
 
     @pytest.mark.asyncio
-    async def test_stream_with_empty_content(self):
+    async def test_stream_authentication_error(self, mock_litellm):
+        """Test handling of authentication errors with user-friendly message."""
+        # Set up the mock exception
+        mock_auth_error = mock_litellm.AuthenticationError("API key not valid")
+        mock_litellm.acompletion.side_effect = mock_auth_error
+
+        client = LiteLLMClient("openai/gpt-4", "invalid-key")
+
+        with pytest.raises(LLMAuthenticationError) as exc_info:
+            async for chunk in client.stream("test prompt", "test content"):
+                pass
+
+        error = exc_info.value
+        assert error.model == "openai/gpt-4"
+        assert error.provider == "openai"
+        assert error.original_error == mock_auth_error
+
+        error_message = str(error)
+        assert "Authentication failed for model 'openai/gpt-4'" in error_message
+        assert "Please set a valid API key for openai" in error_message
+        assert "SPEGEL_API_KEY environment variable" in error_message
+        assert "OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY" in error_message
+
+    @pytest.mark.asyncio
+    async def test_stream_authentication_error_simple_model(self, mock_litellm):
+        """Test authentication error handling for simple model names."""
+        # Set up the mock exception
+        mock_auth_error = mock_litellm.AuthenticationError("API key not valid")
+        mock_litellm.acompletion.side_effect = mock_auth_error
+
+        client = LiteLLMClient("gpt-4", "invalid-key")
+
+        with pytest.raises(LLMAuthenticationError) as exc_info:
+            async for chunk in client.stream("test prompt", "test content"):
+                pass
+
+        error = exc_info.value
+        assert error.model == "gpt-4"
+        assert error.provider == "gpt-4"  # For simple model names, provider == model
+
+        error_message = str(error)
+        assert "Authentication failed for model 'gpt-4'" in error_message
+        assert "Please set a valid API key for gpt-4" in error_message
+
+    @pytest.mark.asyncio
+    async def test_stream_with_empty_content(self, mock_litellm):
         """Test streaming with empty content."""
-        with patch("spegel.llm.genai") as mock_genai:
-            mock_client = Mock()
-            mock_genai.Client.return_value = mock_client
 
-            # Mock empty streaming response
-            async def mock_stream():
-                return
-                yield  # unreachable
+        # Mock empty streaming response
+        async def mock_stream():
+            return
+            yield  # unreachable
 
-            async def mock_generate_content_stream(*args, **kwargs):
-                return mock_stream()
+        async def async_completion_mock(**kwargs):
+            return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+        mock_litellm.acompletion = async_completion_mock
 
-            client = GeminiClient("test-key")
+        client = LiteLLMClient("test-model", "test-key")
 
-            chunks = []
-            async for chunk in client.stream("test prompt", ""):
-                chunks.append(chunk)
+        chunks = []
+        async for chunk in client.stream("test prompt", ""):
+            chunks.append(chunk)
 
-            assert chunks == []
+        assert chunks == []
 
     @pytest.mark.asyncio
-    async def test_stream_handles_exceptions(self):
-        """Test that streaming handles chunk parsing exceptions gracefully."""
-        with patch("spegel.llm.genai") as mock_genai:
-            mock_client = Mock()
-            mock_genai.Client.return_value = mock_client
+    async def test_stream_without_litellm(self):
+        """Test streaming when litellm is not available."""
+        with patch("spegel.llm.litellm") as mock_litellm:
+            client = LiteLLMClient("test-model", "test-key")
 
-            # Mock chunks with some that will raise exceptions
-            good_chunk = Mock()
-            good_chunk.candidates = [Mock()]
-            good_chunk.candidates[0].content.parts = [Mock()]
-            good_chunk.candidates[0].content.parts[0].text = "good"
+            # Patch litellm to None after client creation to simulate unavailability
+            with patch("spegel.llm.litellm", None):
+                with pytest.raises(RuntimeError, match="litellm not available"):
+                    async for chunk in client.stream("test prompt", "test content"):
+                        pass
 
-            bad_chunk = Mock()
-            bad_chunk.candidates = []  # This will cause IndexError
+    @pytest.mark.asyncio
+    async def test_stream_completion_error(self, mock_litellm):
+        """Test handling of completion errors."""
+        mock_litellm.acompletion.side_effect = Exception("API Error")
 
-            async def mock_stream():
-                yield good_chunk
-                yield bad_chunk
-                yield good_chunk
+        client = LiteLLMClient("test-model", "test-key")
 
-            async def mock_generate_content_stream(*args, **kwargs):
-                return mock_stream()
-
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
-
-            client = GeminiClient("test-key")
-
-            chunks = []
+        with pytest.raises(Exception, match="API Error"):
             async for chunk in client.stream("test prompt", "test content"):
-                chunks.append(chunk)
+                pass
 
-            # Should only get the good chunks, bad ones are skipped
-            assert chunks == ["good", "good"]
+    @pytest.mark.asyncio
+    async def test_stream_malformed_response(self, mock_litellm):
+        """Test handling of malformed API responses."""
+
+        # Mock malformed response chunks
+        async def mock_stream():
+            # Chunk with empty choices
+            chunk1 = Mock()
+            chunk1.choices = []
+            yield chunk1
+
+            # Chunk with None content
+            chunk2 = Mock()
+            chunk2.choices = [Mock()]
+            chunk2.choices[0].delta = Mock()
+            chunk2.choices[0].delta.content = None
+            yield chunk2
+
+            # Valid chunk
+            chunk3 = Mock()
+            chunk3.choices = [Mock()]
+            chunk3.choices[0].delta = Mock()
+            chunk3.choices[0].delta.content = "Valid"
+            yield chunk3
+
+        async def async_completion_mock(**kwargs):
+            return mock_stream()
+
+        mock_litellm.acompletion = async_completion_mock
+
+        client = LiteLLMClient("test-model", "test-key")
+
+        chunks = []
+        async for chunk in client.stream("test prompt", "test content"):
+            chunks.append(chunk)
+
+        # Should only get the valid chunk
+        assert chunks == ["Valid"]
 
 
 class TestLLMClient:
@@ -170,171 +249,93 @@ class TestLLMClient:
 class TestLLMErrorScenarios:
     """Test error scenarios for LLM functionality."""
 
-    def test_get_default_client_missing_environment(self):
+    def test_create_client_missing_environment(self):
         """Test client creation with missing environment variables."""
         with patch.dict(os.environ, {}, clear=True):
-            client: LLMClient | None = get_default_client()
-            assert client is None
-
-    def test_get_default_client_invalid_api_key(self):
-        """Test client creation with invalid API key format."""
-        with patch.dict(os.environ, {"GEMINI_API_KEY": ""}):  # Empty key
-            client: LLMClient | None = get_default_client()
-            assert client is None
-
-    def test_get_default_client_import_error(self):
-        """Test graceful handling when google-genai is not installed."""
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "valid-key"}):
-            with patch("spegel.llm.genai", None):
-                client: LLMClient | None = get_default_client()
-                assert client is None
+            with patch("os.path.exists", return_value=False):  # No Ollama binary
+                # Mock LiteLLMClient to raise exception (simulating no API key)
+                with patch(
+                    "spegel.llm.LiteLLMClient", side_effect=Exception("No API key")
+                ):
+                    client = create_client("test-model")
+                    assert client is None
 
     @pytest.mark.asyncio
-    async def test_gemini_client_stream_network_error(self):
+    async def test_litellm_client_stream_network_error(self, mock_litellm):
         """Test handling of network errors during streaming."""
-        with patch("spegel.llm.genai") as mock_genai:
-            mock_client = Mock()
-            mock_genai.Client.return_value = mock_client
+        mock_litellm.acompletion.side_effect = Exception("Network error")
 
-            # Mock network error during streaming
-            async def mock_generate_content_stream(*args, **kwargs):
-                raise Exception("Network error")
+        client = LiteLLMClient("test-model", "test-key")
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
-
-            client = GeminiClient("test-key")
-
-            # Should handle error gracefully
-            chunks = []
-            try:
-                async for chunk in client.stream("test prompt", "test content"):
-                    chunks.append(chunk)  # pragma: no cover
-            except Exception:
-                # Exception is expected and handled by the test
+        # Should raise the exception
+        with pytest.raises(Exception, match="Network error"):
+            async for chunk in client.stream("test prompt", "test content"):
                 pass
 
-            # Should not have collected any chunks due to error
-            assert chunks == []
-
     @pytest.mark.asyncio
-    async def test_gemini_client_stream_partial_failure(self):
+    async def test_litellm_client_stream_partial_failure(self, mock_litellm):
         """Test handling of partial failures during streaming."""
-        with patch("spegel.llm.genai") as mock_genai:
-            mock_client = Mock()
-            mock_genai.Client.return_value = mock_client
 
-            # Mock chunks with some failures
-            async def mock_stream():
-                # First chunk succeeds
-                chunk = Mock()
-                chunk.candidates = [Mock()]
-                chunk.candidates[0].content.parts = [Mock()]
-                chunk.candidates[0].content.parts[0].text = "Success"
-                yield chunk
+        # Mock chunks with some failures
+        async def mock_stream():
+            # First chunk succeeds
+            chunk = Mock()
+            chunk.choices = [Mock()]
+            chunk.choices[0].delta = Mock()
+            chunk.choices[0].delta.content = "Success"
+            yield chunk
 
-            async def mock_generate_content_stream(*args, **kwargs):
-                return mock_stream()
+            # Second chunk fails in processing
+            chunk2 = Mock()
+            chunk2.choices = [Mock()]
+            chunk2.choices[0].delta = Mock()
+            chunk2.choices[0].delta.content = None  # This will be skipped
+            yield chunk2
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+        async def async_completion_mock(**kwargs):
+            return mock_stream()
 
-            client = GeminiClient("test-key")
+        mock_litellm.acompletion = async_completion_mock
 
-            chunks = []
-            async for chunk in client.stream("test prompt", "test content"):
-                chunks.append(chunk)
+        client = LiteLLMClient("test-model", "test-key")
 
-            # Should get the successful chunk
-            assert chunks == ["Success"]
+        chunks = []
+        async for chunk in client.stream("test prompt", "test content"):
+            chunks.append(chunk)
 
-    @pytest.mark.asyncio
-    async def test_gemini_client_stream_malformed_response(self):
-        """Test handling of malformed API responses."""
-        with patch("spegel.llm.genai") as mock_genai:
-            mock_client = Mock()
-            mock_genai.Client.return_value = mock_client
-
-            # Mock malformed response chunks
-            async def mock_stream():
-                # Chunk with missing structure
-                chunk1 = Mock()
-                chunk1.candidates = []  # Empty candidates
-                yield chunk1
-
-                # Chunk with None text
-                chunk2 = Mock()
-                chunk2.candidates = [Mock()]
-                chunk2.candidates[0].content.parts = [Mock()]
-                chunk2.candidates[0].content.parts[0].text = None
-                yield chunk2
-
-                # Valid chunk
-                chunk3 = Mock()
-                chunk3.candidates = [Mock()]
-                chunk3.candidates[0].content.parts = [Mock()]
-                chunk3.candidates[0].content.parts[0].text = "Valid"
-                yield chunk3
-
-            async def mock_generate_content_stream(*args, **kwargs):
-                return mock_stream()
-
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
-
-            client = GeminiClient("test-key")
-
-            chunks = []
-            async for chunk in client.stream("test prompt", "test content"):
-                chunks.append(chunk)
-
-            # Should only get the valid chunk
-            assert chunks == ["Valid"]
+        # Should get only the successful chunk
+        assert chunks == ["Success"]
 
     @pytest.mark.asyncio
-    async def test_gemini_client_stream_empty_prompt(self):
+    async def test_litellm_client_stream_empty_prompt(self, mock_litellm):
         """Test streaming with empty prompt."""
-        with patch("spegel.llm.genai") as mock_genai:
-            mock_client = Mock()
-            mock_genai.Client.return_value = mock_client
 
-            # Mock empty response for empty prompt
-            async def mock_stream():
-                return
-                yield  # unreachable
+        # Mock empty response for empty prompt
+        async def mock_stream():
+            return
+            yield  # unreachable
 
-            async def mock_generate_content_stream(*args, **kwargs):
-                return mock_stream()
+        async def async_completion_mock(**kwargs):
+            return mock_stream()
 
-            mock_client.aio.models.generate_content_stream = (
-                mock_generate_content_stream
-            )
+        mock_litellm.acompletion = async_completion_mock
 
-            client = GeminiClient("test-key")
+        client = LiteLLMClient("test-model", "test-key")
 
-            chunks = []
-            async for chunk in client.stream("", ""):  # Empty prompt and content
-                chunks.append(chunk)
+        chunks = []
+        async for chunk in client.stream("", ""):  # Empty prompt and content
+            chunks.append(chunk)
 
-            assert chunks == []
+        assert chunks == []
 
-    def test_gemini_client_logging_error_handling(self):
+    def test_litellm_client_logging_error_handling(self, mock_litellm):
         """Test that logging errors don't affect functionality."""
-        with patch("spegel.llm.genai") as mock_genai:
-            mock_client = Mock()
-            mock_genai.Client.return_value = mock_client
-
-            # Mock logging to raise exception during client creation
-            with patch(
-                "spegel.llm.logger.info", side_effect=Exception("Logging failed")
-            ):
-                # Should still create client despite logging errors
-                client = GeminiClient("test-key")
-                assert client._client == mock_client
-                assert client.model_name == "gemini-2.5-flash-lite-preview-06-17"
+        # Mock logging to raise exception during client creation
+        with patch("spegel.llm.logger.info", side_effect=Exception("Logging failed")):
+            # Should still create client despite logging errors
+            client = LiteLLMClient("test-model", "test-key")
+            assert client.model == "test-model"
+            assert client.api_key == "test-key"
 
     def test_enable_llm_logging_error_handling(self):
         """Test error handling in logging configuration."""

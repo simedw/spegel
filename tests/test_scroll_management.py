@@ -1,11 +1,4 @@
-import sys
-from pathlib import Path
 from unittest.mock import Mock, patch
-
-# Add project 'src' directory to sys.path so tests work without editable install
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
 
 from spegel.main import ScrollManager
 
@@ -216,8 +209,8 @@ class TestScrollIntegration:
             mock_config.settings.app_title = "Test"
             mock_load_config.return_value = mock_config
 
-            with patch("spegel.main.get_default_client") as mock_get_client:
-                mock_get_client.return_value = (None, False)
+            with patch("spegel.main.create_client") as mock_create_client:
+                mock_create_client.return_value = None
 
                 # Import after patching to avoid import-time dependencies
                 from spegel.main import Spegel
