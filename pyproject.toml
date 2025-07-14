@@ -35,6 +35,7 @@ dependencies = [
     "requests>=2.32.4",
     "textual>=3.3.0",
     "pydantic>=2.7.1",
+    "prompt-toolkit>=3.0.51",
 ]
 
 [project.urls]

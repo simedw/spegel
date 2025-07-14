@@ -1,12 +1,3 @@
-from __future__ import annotations
-
-from pathlib import Path
-from typing import Any
-
-import tomllib
-from pydantic import BaseModel, Field, model_validator
-
-
 """Configuration handling for Spegel.
 
 This module is responsible for:
@@ -14,6 +5,14 @@ This module is responsible for:
 • Loading configuration TOML files from the well-known locations.
 • Providing fallback defaults so the app can run with zero user config.
 """
+
+from __future__ import annotations
+
+import tomllib
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, Field, model_validator
 
 __all__ = [
     "View",

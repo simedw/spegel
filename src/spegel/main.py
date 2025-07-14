@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
 """Spegel - Reflect the web through AI"""
 
-from argparse import Namespace
 import asyncio
-from contextlib import suppress
-from dotenv import load_dotenv
 import re
-from textual import on
-from typing import cast, Literal
+from contextlib import suppress
+from typing import cast
 from urllib.parse import urljoin
 
-from spegel.config import FullConfig
-from spegel.llm import LLMClient
-
-# External modules
-from .config import load_config, View
-from .llm import create_client
-
+from dotenv import load_dotenv
+from textual import on
 from textual.app import App, ComposeResult
 from textual.containers import Container
 from textual.widgets import (
@@ -25,14 +17,21 @@ from textual.widgets import (
     Input,
     Markdown,
     Static,
+    Tab,
     TabbedContent,
     TabPane,
     TextArea,
-    Tab,
 )
 
-from .web import fetch_url as fetch_url_blocking, html_to_markdown
+from spegel.config import FullConfig
+from spegel.llm import LLMClient
+
+# External modules
+from .config import View, load_config
+from .llm import create_client
 from .views import stream_view
+from .web import fetch_url as fetch_url_blocking
+from .web import html_to_markdown
 
 # Load environment variables
 load_dotenv()
@@ -730,9 +729,9 @@ class Spegel(App):
 
         def update_label() -> None:
             """Update the tab label on the main thread."""
-            with suppress(
-                Exception
-            ):  # If we can't update the tab label, just ignore it
+
+            with suppress(Exception):
+                # If we can't update the tab label, just ignore it
                 tabbed: TabbedContent = self.query_one(TabbedContent)
                 tab: Tab = tabbed.get_tab(view_id)
                 if tab:
@@ -744,7 +743,8 @@ class Spegel(App):
 
     def _reset_tab_names(self) -> None:
         """Reset all tab names to their base names."""
-        with suppress(Exception):  # Ignore if tab not found
+        with suppress(Exception):
+            # Ignore if tab not found
             tabbed: TabbedContent = self.query_one(TabbedContent)
             for view_id, view in self.views.items():
                 tab: Tab = tabbed.get_tab(view_id)

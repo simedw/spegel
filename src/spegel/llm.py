@@ -3,6 +3,10 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import AsyncIterator
+from typing import cast
+
+from litellm import CustomStreamWrapper
+from litellm.types.utils import ModelResponse
 
 """Light abstraction layer over one or more LLM back-ends.
 
@@ -33,7 +37,7 @@ def enable_llm_logging(level: int = logging.INFO) -> None:
 try:
     import litellm
 except ImportError:  # pragma: no cover – dependency is optional until used
-    litellm = None  # type: ignore
+    litellm = None  # type: ignore[assignment]
 
 __all__ = ["LLMClient", "LiteLLMClient", "create_client", "LLMAuthenticationError"]
 
@@ -123,7 +127,9 @@ class LiteLLMClient(LLMClient):
 
         try:
             response = await litellm.acompletion(**completion_params)
-
+            if isinstance(response, ModelResponse):
+                # only the ModelResponse class has the context manager, so this gets rid of type issues
+                response = cast(CustomStreamWrapper, response)
             async for chunk in response:
                 try:
                     # Extract content from the chunk
@@ -137,7 +143,7 @@ class LiteLLMClient(LLMClient):
                     logger.warning("Error processing chunk: %s", e)
                     continue
 
-        except litellm.AuthenticationError as e:
+        except litellm.AuthenticationError as e:  # type: ignore[no-redef]
             logger.error("Authentication error in LLM completion: %s", e)
             # Extract the model provider from the model name for better error message
             model_provider = (
@@ -221,6 +227,13 @@ if __name__ == "__main__":
 
     async def _main() -> None:
         try:
+            if client is None:
+                print(
+                    f"Error: No LLM client available for model '{model}'. "
+                    "Check your API keys and model configuration.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
             async for chunk in client.stream(args.prompt, ""):
                 print(chunk, end="", flush=True)
         except KeyboardInterrupt:
