@@ -82,7 +82,7 @@ default_view = "terminal"
 app_title = "Spegel"
 
 [ai]
-default_model="gpt-4.1-nano"
+default_model="gpt-5-mini"
 
 [[views]]
 id = "raw"
@@ -97,7 +97,7 @@ name = "Terminal"
 hotkey = "2"
 order = "2"
 prompt = "Transform this webpage into the perfect terminal browsing experience! ..."
-model="claude-3-5-haiku-20241022"
+model="claude-4-5-haiku-20250414"
 ```
 
 ## Local Models with Ollama
