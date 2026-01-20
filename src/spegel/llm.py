@@ -67,7 +67,7 @@ class LiteLLMClient(LLMClient):
 
     def __init__(
         self,
-        model: str = "gemini/gemini-2.5-flash-lite-preview-06-17",
+        model: str = "gemini/gemini-2.5-flash-lite",
         api_key: str | None = None,
         api_base: str | None = None,
         **kwargs,
@@ -162,7 +162,7 @@ def create_client(model: str) -> LLMClient | None:
     """Create an LLM client with the specified model.
 
     Args:
-        model: The model identifier (e.g., "gpt-4o-mini", "claude-3-5-haiku-20241022")
+        model: The model identifier (e.g., "gpt-5-mini", "claude-4-5-haiku-20250414")
 
     Returns:
         LLMClient instance or None if creation failed

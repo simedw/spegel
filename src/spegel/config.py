@@ -46,7 +46,7 @@ class View(BaseModel):
 
 
 class AI(BaseModel):
-    default_model: str = "gemini/gemini-2.5-flash-lite-preview-06-17"
+    default_model: str = "gemini/gemini-2.5-flash-lite"
 
 
 class Settings(BaseModel):
@@ -84,7 +84,7 @@ DEFAULT_CONFIG_DICT: Dict[str, Any] = {
         "app_title": "Spegel",
     },
     "ai": {
-        "default_model": "gemini/gemini-2.5-flash-lite-preview-06-17",
+        "default_model": "gemini/gemini-2.5-flash-lite",
     },
     "ui": {"show_icons": True, "compact_mode": False},
     "views": [
