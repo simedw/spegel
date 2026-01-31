@@ -6,6 +6,9 @@ dist/
 wheels/
 *.egg-info
 .env
+.coverage
+**/htmlcov
 
 # Virtual environments
 .venv
+.nox
