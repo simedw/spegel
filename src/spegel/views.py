@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from typing import List
-
 from .config import View
-from .llm import LLMClient, create_client, LLMAuthenticationError
+from .llm import LLMAuthenticationError, LLMClient, create_client
 from .web import extract_clean_text, html_to_markdown
-
 
 """View processing logic for Spegel.
 

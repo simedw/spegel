@@ -1,34 +1,36 @@
-from __future__ import annotations
-
-import re
-from typing import Optional, List
-import requests
-from bs4 import BeautifulSoup
-
 """Web fetching and HTML cleaning utilities for Spegel.
 
 This module centralises network I/O so the UI layer can remain async and testable.
 """
 
+from __future__ import annotations
+
+from argparse import Namespace
+import re
+from bs4.element import NavigableString, PageElement
+import httpx
+from bs4 import BeautifulSoup, ResultSet, Tag
+from charset_normalizer import CharsetMatch, from_bytes
 
 __all__ = ["fetch_url", "extract_clean_text"]
-
 
 HEADERS = {"User-Agent": "Spegel/1.0 (Terminal Browser)"}
 
 
-def fetch_url(url: str, timeout: int = 10) -> Optional[str]:
+def fetch_url(url: str, timeout: int = 10) -> str | None:
     """Blocking HTTP GET returning the raw HTML text or None on error."""
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=timeout)
+        resp: httpx.Response = httpx.get(url, headers=HEADERS, timeout=timeout)
         resp.raise_for_status()
 
-        # Handle encoding more robustly to fix Unicode issues, but only when Requests clearly does not know
+        # Handle encoding more robustly to fix Unicode issues using charset_normalizer
         if not resp.encoding or resp.encoding.lower() in ("iso-8859-1", "ascii"):
-            resp.encoding = resp.apparent_encoding
-
+            detected: CharsetMatch | None = from_bytes(resp.content).best()
+            if detected is not None:
+                resp.encoding = detected.encoding
         return resp.text
-    except requests.RequestException:
+    except httpx.HTTPError as exc:
+        # TODO: Log the error or handle it as needed
         return None
 
 
@@ -37,12 +39,12 @@ def fetch_url(url: str, timeout: int = 10) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 
-def _extract_table_content(table) -> List[str]:
-    content: List[str] = []
+def _extract_table_content(table) -> list[str]:
+    content: list[str] = []
     for row in table.find_all("tr"):
         cells = row.find_all(["td", "th"])
         if cells:
-            row_content: List[str] = []
+            row_content: list[str] = []
             for cell in cells:
                 links = cell.find_all("a")
                 if links:
@@ -103,7 +105,7 @@ def extract_clean_text(
     ]
 
     for selector in content_selectors:
-        elements = soup.select(selector)
+        elements: ResultSet[Tag] = soup.select(selector)
         if elements:
             # Use the element with the most text content
             best_element = max(elements, key=lambda e: len(e.get_text(strip=True)))
@@ -134,7 +136,7 @@ def extract_clean_text(
                 node.decompose()
     else:
         # Fallback: clean the whole page but be more conservative
-        working_soup = soup
+        working_soup: BeautifulSoup = soup
 
         # More targeted noise removal (avoid overly broad selectors)
         conservative_noise_selectors = [
@@ -177,21 +179,21 @@ def extract_clean_text(
         h = html2text.HTML2Text()
         h.ignore_links = False
         h.ignore_images = True
-        h.body_width = None
+        h.body_width = 0  # disable line wrapping to avoid broken URLs
         h.wrap_links = False
         h.protect_links = True
-        cleaned_markdown = h.handle(str(working_soup))
+        cleaned_markdown: str = h.handle(str(working_soup))
         # html2text wraps URLs in <...>. Remove the angle brackets for cleaner markdown.
-        cleaned_markdown = re.sub(r"\]\(<([^>]+)>\)", r"](\1)", cleaned_markdown)
+        cleaned_markdown: str = re.sub(r"\]\(<([^>]+)>\)", r"](\1)", cleaned_markdown)
 
     # Optional truncation for token safety when used inside the browser
     if max_chars is not None and len(cleaned_markdown) > max_chars:
         cleaned_markdown = cleaned_markdown[:max_chars] + "\n...(truncated)"
 
-    title_tag = soup.find("title")
-    title_text = title_tag.get_text().strip() if title_tag else "No Title"
+    title_tag: PageElement | Tag | NavigableString | None = soup.find("title")
+    title_text: str = title_tag.get_text().strip() if title_tag else "No Title"
 
-    header = f"Title: {title_text}\nURL: {url or ''}\n\n"
+    header: str = f"Title: {title_text}\nURL: {url or ''}\n\n"
     return header + cleaned_markdown
 
 
@@ -209,7 +211,7 @@ def html_to_markdown(html: str, base_url: str | None = None) -> str:
         h.ignore_links = False
         h.ignore_images = False
         h.ignore_emphasis = False
-        h.body_width = None  # disable line wrapping to avoid broken URLs
+        h.body_width = 0  # disable line wrapping to avoid broken URLs
         h.wrap_links = False
         h.unicode_snob = True
         h.skip_internal_links = True
@@ -230,10 +232,17 @@ def html_to_markdown(html: str, base_url: str | None = None) -> str:
         markdown_content = re.sub(r"\]\(([^)]+)\)", _fix, markdown_content)
 
         soup = BeautifulSoup(html, "lxml")
-        title = soup.find("title")
-        title_text = title.get_text().strip() if title else "No Title"
+        title: PageElement | Tag | NavigableString | None = soup.find("title")
+        title_text: str = title.get_text().strip() if title else "No Title"
 
-        header = [f"# {title_text}", "", f"**URL:** `{base_url or ''}`", "", "---", ""]
+        header: list[str] = [
+            f"# {title_text}",
+            "",
+            f"**URL:** `{base_url or ''}`",
+            "",
+            "---",
+            "",
+        ]
         return "\n".join(header) + markdown_content
     except Exception as exc:
         return f"## ❌ Error parsing HTML\n\n```\n{exc}\n```"
@@ -247,9 +256,9 @@ if __name__ == "__main__":
         description="Fetch a URL and print Spegel's cleaned text representation."
     )
     parser.add_argument("url", help="URL to fetch")
-    args = parser.parse_args()
+    args: Namespace = parser.parse_args()
 
-    html = fetch_url(args.url)
+    html: str | None = fetch_url(args.url)
     if html is None:
         print("Error: Failed to fetch URL", file=sys.stderr)
         sys.exit(1)

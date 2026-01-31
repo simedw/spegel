@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spegel.llm import LiteLLMClient, LLMClient, create_client, LLMAuthenticationError
+from spegel.llm import LiteLLMClient, LLMAuthenticationError, LLMClient, create_client
 
 
 @pytest.fixture

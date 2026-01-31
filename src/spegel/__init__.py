@@ -1,12 +1,9 @@
 """Spegel – Reflect the web through AI (package entry)."""
 
-from importlib.metadata import version, PackageNotFoundError
+from ._internal.debug import _get_version
 
-try:
-    __version__: str = version("spegel")
-except PackageNotFoundError:  # pragma: no cover
-    __version__ = "0.0.0-dev"
+__version__: str = _get_version()
 
-from .main import Spegel as _SpegelApp, main  # noqa: F401
+from .main import Spegel as _SpegelApp  # noqa: F401
 
-__all__ = ["__version__", "_SpegelApp", "main"]
+__all__ = ["__version__", "_SpegelApp"]

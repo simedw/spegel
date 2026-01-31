@@ -2,7 +2,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spegel.main import Spegel, main
+from spegel._internal.cli import main
+from spegel.main import Spegel
 
 
 class TestMainCLI:
@@ -10,7 +11,7 @@ class TestMainCLI:
 
     def test_main_no_args(self):
         """Main with no arguments should start app with no initial URL."""
-        with patch("spegel.main.Spegel") as mock_spegel_class:
+        with patch("spegel._internal.cli.Spegel") as mock_spegel_class:
             mock_app = Mock()
             mock_spegel_class.return_value = mock_app
 
@@ -23,7 +24,7 @@ class TestMainCLI:
 
     def test_main_with_url(self):
         """Main with URL argument should start app with that URL."""
-        with patch("spegel.main.Spegel") as mock_spegel_class:
+        with patch("spegel._internal.cli.Spegel") as mock_spegel_class:
             mock_app = Mock()
             mock_spegel_class.return_value = mock_app
 
@@ -36,7 +37,7 @@ class TestMainCLI:
 
     def test_main_with_full_url(self):
         """Main with full URL should not modify it."""
-        with patch("spegel.main.Spegel") as mock_spegel_class:
+        with patch("spegel._internal.cli.Spegel") as mock_spegel_class:
             mock_app = Mock()
             mock_spegel_class.return_value = mock_app
 
@@ -48,7 +49,7 @@ class TestMainCLI:
 
     def test_main_with_http_url(self):
         """Main with http:// URL should not modify it."""
-        with patch("spegel.main.Spegel") as mock_spegel_class:
+        with patch("spegel._internal.cli.Spegel") as mock_spegel_class:
             mock_app = Mock()
             mock_spegel_class.return_value = mock_app
 
@@ -170,7 +171,7 @@ class TestURLHandling:
     )
     def test_url_preprocessing(self, input_url, expected):
         """Test that URLs are correctly preprocessed in main()."""
-        with patch("spegel.main.Spegel") as mock_spegel_class:
+        with patch("spegel._internal.cli.Spegel") as mock_spegel_class:
             mock_app = Mock()
             mock_spegel_class.return_value = mock_app
 
