@@ -67,7 +67,7 @@ class LiteLLMClient(LLMClient):
 
     def __init__(
         self,
-        model: str = "gemini/gemini-2.5-flash-lite",
+        model: str = "gemini/gemini-3.5-flash-lite",
         api_key: str | None = None,
         api_base: str | None = None,
         **kwargs,
@@ -84,7 +84,7 @@ class LiteLLMClient(LLMClient):
         self,
         prompt: str,
         content: str,
-        temperature: float = 0.2,
+        temperature: float | None = None,
         max_tokens: int = 8192,
         **kwargs,
     ) -> AsyncIterator[str]:
@@ -101,11 +101,13 @@ class LiteLLMClient(LLMClient):
         completion_params = {
             "model": self.model,
             "messages": messages,
-            "temperature": temperature,
             "max_tokens": max_tokens,
             "stream": True,
             **kwargs,
         }
+
+        if temperature is not None:
+            completion_params["temperature"] = temperature
 
         if self.api_key:
             completion_params["api_key"] = self.api_key
@@ -162,7 +164,7 @@ def create_client(model: str) -> LLMClient | None:
     """Create an LLM client with the specified model.
 
     Args:
-        model: The model identifier (e.g., "gpt-5-mini", "claude-4-5-haiku-20250414")
+        model: The model identifier (e.g., "gpt-5.6-luna", "anthropic/claude-haiku-5-5")
 
     Returns:
         LLMClient instance or None if creation failed

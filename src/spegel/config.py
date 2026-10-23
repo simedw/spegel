@@ -39,14 +39,14 @@ class View(BaseModel):
     model: str = ""  # Optional model override for this view
 
     @model_validator(mode="after")
-    def validate_hotkey(cls, values):  # type: ignore[override]
-        if len(values.hotkey) != 1:
+    def validate_hotkey(self):
+        if len(self.hotkey) != 1:
             raise ValueError("Hotkey must be a single character")
-        return values
+        return self
 
 
 class AI(BaseModel):
-    default_model: str = "gemini/gemini-2.5-flash-lite"
+    default_model: str = "gemini/gemini-3.5-flash-lite"
 
 
 class Settings(BaseModel):
@@ -84,7 +84,7 @@ DEFAULT_CONFIG_DICT: Dict[str, Any] = {
         "app_title": "Spegel",
     },
     "ai": {
-        "default_model": "gemini/gemini-2.5-flash-lite",
+        "default_model": "gemini/gemini-3.5-flash-lite",
     },
     "ui": {"show_icons": True, "compact_mode": False},
     "views": [
